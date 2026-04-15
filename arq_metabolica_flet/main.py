@@ -18,7 +18,7 @@ import math
 # ═══════════════════════════════════════════════════════════
 BG       = "#0a0e1a"
 SURFACE  = "#111827"
-CARD     = "#161f35" #COLOR   
+CARD     = "#161f35"
 BORDER   = "#1e2d4a"
 ACCENT   = "#00e5c8"
 ACCENT2  = "#ff6b35"
@@ -33,60 +33,20 @@ WHITE    = "#ffffff"
 # ═══════════════════════════════════════════════════════════
 #  MODELO MATEMÁTICO IARRI-MX
 # ═══════════════════════════════════════════════════════════
-WEIGHTS = {"AV": 0.9, "IC": 0.25, "ED": 0.15, "EAR": 0.25, "IMP": 0.15} #cambio indice de poblacion para obtener la resistencia
-#COLUMNAS DE CUADRO DEBAJO DE LOS COLORES VERDE,AMARILLO Y ROJP
+WEIGHTS = {"AV": 0.20, "IC": 0.25, "ED": 0.15, "EAR": 0.25, "IM": 0.15}
+
 MUNICIPIOS = [
-    {"nombre": "San Andrés Cholula",      "AV": 0.80, "IC": 0.60, "ED": 0.40, "EAR": 0.45, "IMP": 0.10},
-    {"nombre": "San Pablo Xochimehuacan", "AV": 0.50, "IC": 0.35, "ED": 0.20, "EAR": 0.60, "IMP": 0.55},
-    {"nombre": "Cuautlancingo",           "AV": 0.30, "IC": 0.20, "ED": 0.10, "EAR": 0.80, "IMP": 0.70},
-]
-ENCUESTA = [
-    {
-        "variable": "AV",#acceso aeas verdes
-        "pregunta":"¿Como consideras tu estilo de vida",
-        "opciones": [
-          {"texto": "Activo con servicios completos y lugares tranquilos para caminar.", "valor": 0.0},
-          {"texto": "Inactivo con servicios y problemas de salud(actualmente) sin poder salir a un lugar a caminar.", "valor": 0.0},
-          {"texto": "Prefiero no responder la pregunta", "valor": 0.0}  
-        ],
-    },
-    {
-        
-        "variable": "IC", #indice de actividad fisica
-        "pregunta": "¿Cuantas horas pasas al dia sentado?",
-        "opciones": [
-             {"texto":"Menos de dos horas al dia", "valor": 0.0},
-             {"texto":"Mas de seis horas al dia", "valor": 0.0},
-             {"texto":"Menos de una hora o quince minutos al dia", "valor": 0.0 },
-        ], 
-    },
-    {
-        "Variable": "ED", #entrenamiento deportivo
-        "pregunta": "¿Practica algun deporte, y soporta los sintomas del ritmo cardiaco elevado  que le produce?",
-        "opciones": [
-          {"texto": "Si entreno de forma constante.", "valor":0.0},
-          {"texto": "No practico ningun deporte.", "valor":0.0},
-          {"texto": "Puedo hacerlo media hora y ya.","valor":0.0}, 
-        ],
-        #"2 pregg"
-    },
-    {
-        "Variable": "EAR", #entorno alimentario riesgoso
-        "pregunta": "Con que frecuencia consume azucar como productos empaquetados.",
-        "opciones": [
-          {"texto": "Lo hago al menos una vez a la semana.", "valor": 0.0},
-          {"texto": "No consumo ese tipo de alimentos.", "valor":0.0},
-          
-        ],
-    },    
+    {"nombre": "San Andrés Cholula",      "AV": 0.80, "IC": 0.60, "ED": 0.40, "EAR": 0.45, "IM": 0.10},
+    {"nombre": "San Pablo Xochimehuacan", "AV": 0.50, "IC": 0.35, "ED": 0.20, "EAR": 0.60, "IM": 0.55},
+    {"nombre": "Cuautlancingo",           "AV": 0.30, "IC": 0.20, "ED": 0.10, "EAR": 0.80, "IM": 0.70},
 ]
 
 VARIABLES = [
     {"key": "AV",  "label": "Áreas Verdes",                "icon": "🌳", "color": LOW,    "inv": True,  "desc": "Estándar OMS 9 m²/hab"},
     {"key": "IC",  "label": "Índice Caminabilidad",         "icon": "🚶", "color": ACCENT, "inv": True,  "desc": "Intersecciones + banquetas"},
     {"key": "ED",  "label": "Equipamiento Deportivo",       "icon": "⚽", "color": ACCENT3,"inv": True,  "desc": "Equipamientos / población"},
-    {"key": "EAR", "label": "Entorno Alimentario Riesgoso(LUGARES)", "icon": "🍟", "color": ACCENT2,"inv": False, "desc": "Tiendas ultraprocesados / total"},
-    {"key": "IMP",  "label": "Índice de Marginación",        "icon": "📉", "color": MID,    "inv": False, "desc": "CONAPO normalizado"},
+    {"key": "EAR", "label": "Entorno Alimentario Riesgoso", "icon": "🍟", "color": ACCENT2,"inv": False, "desc": "Tiendas ultraprocesados / total"},
+    {"key": "IM",  "label": "Índice de Marginación",        "icon": "📉", "color": MID,    "inv": False, "desc": "CONAPO normalizado"},
 ]
 
 RECOMENDACIONES = [
@@ -106,9 +66,9 @@ BADGES = [
     {"emoji": "🔬", "nombre": "Investigador IARRI",     "earned": False},
 ]
 
-def calc_iarri(AV, IC, ED, EAR, IMP): #AV =iNDICE DE AREAS VERDES
-    return (WEIGHTS["AV"]/(AV) + WEIGHTS["IC"] + (1-IC) / 3 +
-            WEIGHTS["ED"]/ (1-ED) + WEIGHTS["EAR"]*EAR + WEIGHTS["IMP"]/IMP)
+def calc_iarri(AV, IC, ED, EAR, IM):
+    return (WEIGHTS["AV"]*(1-AV) + WEIGHTS["IC"]*(1-IC) +
+            WEIGHTS["ED"]*(1-ED) + WEIGHTS["EAR"]*EAR + WEIGHTS["IM"]*IM)
 
 def nivel_riesgo(v):
     if v <= 0.33: return "Bajo",  LOW
@@ -122,7 +82,7 @@ def monte_carlo(base, n=1000, sigma=0.12):
     res = []
     for _ in range(n):
         v = {k: max(0, min(1, base[k] + np.random.uniform(-sigma, sigma)))
-             for k in ["AV","IC","ED","EAR","IMP"]}
+             for k in ["AV","IC","ED","EAR","IM"]}
         res.append(calc_iarri(**v))
     arr = np.array(res)
     return arr, arr.mean(), arr.std(), np.percentile(arr,2.5), np.percentile(arr,97.5)
@@ -144,88 +104,7 @@ def tarjeta(content, padding=14, color=CARD, border=True):
 def titulo_seccion(texto):
     return ft.Text(texto, size=11, weight=ft.FontWeight.BOLD,
                    color=MUTED, font_family="monospace")
-def build_encuesta(page, on_complete): #cambio bb
-    respuestas =()
-    paso_actual = [0]
-    contenido =ft.Column([],spacing=12, scroll =ft.ScrollMode.AUTO)
-    progreso_txt = ft.Text("",size=11, color=MUTED)
-    progreso_bar_inner = ft.Container(bgcolor=ACCENT, border_radius=4, height=4, width=0)
-    progreso_bar = ft.Container(
-        content = progreso_bar_inner,
-        bgcolor=BORDER, border_radius=4, height=4, expand=True, clip_behavior=ft.ClipBehavior.HAT
-        
-    )
-    
-    def render_paso():
-        idx = paso_actual[0] 
-        total = len(ENCUESTA)
-        progreso_txt.value = f"Pregunta {idx+1} de {total}"
-        progreso_bar_inner.width = (idx / total) * 600 
-          
-        q = ENCUESTA[idx]
-        v = next( var for var in VARIABLES if var["key"] == q["variable"])
-        
-        botones = []
-        for op in q["opciones"]:
-            def make_click(valor, variable):
-                def on_click(e):
-                    respuestas[variable] = valor
-                    if paso_actual[0] < len(ENCUESTA) - 1:
-                        paso_actual[0] += 1
-                        render_paso()
-                    else:
-                        on_complete(respuestas)
-                return on_click
-        botones.append(
-            
-            ft.Container(
-                content=ft.Row([
-                    ft.Container(
-                        content=ft.Text(v["icon"], size= 16),
-                        bgcolor=v["color"] + "22",
-                        border_radius=8,
-                        width=34, height=34,
-                        alignment=fr.alignment.Alignment(0, 0),
-                    ),
-                    ft.Text(op["texto"],size=13, color= TEXT, expand=True),
-                ], spacing=10),
-                bgcolor=CARD,
-                border= ft.border.all(1, v["color"] + "55"),
-                border_radius=12,
-                padding= ft.padding.symetric(horizontal=14, vertical=12),
-                ink=True,
-                on_click=make_click(op["valor"], q["variable"]),
-            )
-        )    
-        
-        contenido.controls = [
-            ft.Container(height=4),
-            ft.Row([
-            ft.Container(
-                content = ft.Text(v["icon"], size=22),
-                bgcolor = v["color"] + "22",
-                border_radius =12,
-                width=48,height=48,
-                alignment=ft.alignment.Aligment(0,0),
-            ),
-            ft.Colum([
-                ft.Text(v["label"],size=12, color=v["color"],weight=ft.FontWeight.BOLD),
-                ft.Text(q["pregunta"], size=15, color=TEXT,weight=ft.FontWeight.W_600),
-                
-            ], spacing=2, expand=True),
-            ], spacing=12, vertical_alignment=ft.CrossAxiAlignment.CENTER),
-            ft.Container(height=8),
-            *botones,
-        ]    
-        page.update() 
-    
-    render_paso()
-    
-    return ft.Column([
-        
-    ])       
-                 
-                    
+
 def badge_riesgo(nivel, color):
     return ft.Container(
         content=ft.Row([
@@ -270,16 +149,15 @@ def progress_bar_row(valor, color, height=6):
 # ═══════════════════════════════════════════════════════════
 def build_inicio(page, state):
     muni_idx = state["muni_idx"]
-    muni     = MUNICIPIOS[muni_idx] #municipios
-    iarri    = calc_iarri(muni["AV"], muni["IC"], muni["ED"], muni["EAR"], muni["IMP"])
+    muni     = MUNICIPIOS[muni_idx]
+    iarri    = calc_iarri(muni["AV"], muni["IC"], muni["ED"], muni["EAR"], muni["IM"])
     nivel, col = nivel_riesgo(iarri)
-    
-    def cambiar_muni(idx):#LLAMADA DE MUNICIOUI
+
+    def cambiar_muni(idx):
         state["muni_idx"] = idx
         state["refresh"]()
 
     # Chips de municipio
-    #correccion en content para acceder a la segunda pestaña por division de texto del nombre de municipio
     chips = ft.Row([
         ft.GestureDetector(
             content=ft.Container(
@@ -335,8 +213,8 @@ def build_inicio(page, state):
             ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
         ], spacing=10),
         gradient=ft.LinearGradient(
-            begin=ft.alignment.Alignment(-1,-1),
-            end=ft.alignment.Alignment(1,1),
+            begin=ft.alignment.top_left,
+            end=ft.alignment.bottom_right,
             colors=["#0f2441", "#1a0a2e"],
         ),
         border=ft.border.all(1, BORDER),
@@ -356,7 +234,7 @@ def build_inicio(page, state):
                         content=ft.Text(v["icon"], size=18),
                         bgcolor=v["color"] + "22",
                         border_radius=10, width=36, height=36,
-                        alignment=ft.alignment.Alignment(0,0),
+                        alignment=ft.alignment.center,
                     ),
                     ft.Text(f"{val:.2f}", size=20, weight=ft.FontWeight.W_900,
                             color=v["color"]),
@@ -388,7 +266,7 @@ def build_inicio(page, state):
         ("EAR", 0.25, ACCENT2, "Mayor impacto (riesgo)"),
         ("AV",  0.20, LOW,     "Impacto medio"),
         ("ED",  0.15, ACCENT3, "Impacto moderado"),
-        ("IMP",  0.15, MID,     "Impacto moderado"),
+        ("IM",  0.15, MID,     "Impacto moderado"),
     ]
     sens_rows = []
     for k, val, c, hint in sens_items:
@@ -407,7 +285,7 @@ def build_inicio(page, state):
             ], spacing=8)
         )
 
-    sens_card = tarjeta(ft.Column([ #analisis de derivada parcial
+    sens_card = tarjeta(ft.Column([
         ft.Text("∂IARRI — Derivadas Parciales", size=13,
                 weight=ft.FontWeight.BOLD, color=TEXT),
         ft.Text("Mayor impacto: Caminabilidad (IC) y Entorno Alimentario (EAR)",
@@ -418,7 +296,7 @@ def build_inicio(page, state):
     # Fórmula
     formula_card = tarjeta(ft.Column([
         ft.Text("Fórmula del Modelo", size=11, color=MUTED),
-        ft.Text("IARRI = 0.20(1−AV) + 0.25(1−IC)\n       + 0.15(1−ED) + 0.25(EAR) + 0.15(IMP)",
+        ft.Text("IARRI = 0.20(1−AV) + 0.25(1−IC)\n       + 0.15(1−ED) + 0.25(EAR) + 0.15(IM)",
                 size=11, color=ACCENT, font_family="monospace"),
         ft.Row([
             ft.Container(content=ft.Text("  0.00–0.33  Bajo  ", size=10, color=LOW),
@@ -451,7 +329,7 @@ def build_inicio(page, state):
 # ═══════════════════════════════════════════════════════════
 def build_mapa(page, state):
 
-    # Mapa SVG con heatmaps on
+    # Mapa SVG con heatmaps
     mapa_svg = ft.Container(
         content=ft.Stack([
             # Fondo
@@ -522,7 +400,7 @@ def build_mapa(page, state):
 
     # Comparativa municipal
     munis_sorted = sorted(
-        [{**m, "iarri": calc_iarri(m["AV"],m["IC"],m["ED"],m["EAR"],m["IMP"])}
+        [{**m, "iarri": calc_iarri(m["AV"],m["IC"],m["ED"],m["EAR"],m["IM"])}
          for m in MUNICIPIOS],
         key=lambda x: x["iarri"]
     )
@@ -563,14 +441,13 @@ def build_mapa(page, state):
             expand=flex, padding=ft.padding.symmetric(vertical=8, horizontal=4),
             bgcolor=SURFACE,
         )
-    
-    #funcion para los datos de mapa y los municipios
+
     def data_cell(txt, color=TEXT, flex=1, bold=False):
         return ft.Container(
             content=ft.Text(txt, size=11, color=color,
                             weight=ft.FontWeight.BOLD if bold else ft.FontWeight.NORMAL),
             expand=flex, padding=ft.padding.symmetric(vertical=8, horizontal=4),
-            alignment=ft.alignment.Alignment(0,0),
+            alignment=ft.alignment.center,
         )
 
     tabla_header = ft.Row([
@@ -580,26 +457,24 @@ def build_mapa(page, state):
         header_cell("Nivel", 1),
     ], spacing=1)
 
-    tabla_rows = [] #columna de datos de tabla
+    tabla_rows = []
     for i, m in enumerate(MUNICIPIOS):
-        iarri = calc_iarri(m["AV"],m["IC"],m["ED"],m["EAR"],m["IMP"])
-        niv, col = nivel_riesgo(iarri) #funcion de IARRI 
+        iarri = calc_iarri(m["AV"],m["IC"],m["ED"],m["EAR"],m["IM"])
+        niv, col = nivel_riesgo(iarri)
         pr = prob_ri(iarri)
         bg = CARD if i%2==0 else SURFACE
-        parts = m["nombre"].split()
-        name = parts[0] + (" " + parts[1] if len(parts) > 1 else "")
         tabla_rows.append(ft.Container(
-            content=ft.Row([#e
-                data_cell(name, flex=2), #contiene la funcion que va dibujar el panel del mapa
+            content=ft.Row([
+                data_cell(m["nombre"].split()[0]+" "+m["nombre"].split()[1], flex=2),
                 data_cell(f"{iarri:.2f}", color=col, bold=True),
-                data_cell(f"{pr*100:.0f}%"),#simetria 
+                data_cell(f"{pr*100:.0f}%"),
                 ft.Container(
-                    content=ft.Container( #contenedor de la ventana alrededor
+                    content=ft.Container(
                         content=ft.Text(niv, size=10, color=col, weight=ft.FontWeight.BOLD),
                         bgcolor=col+"22", border=ft.border.all(1,col+"55"),
                         border_radius=8, padding=ft.padding.symmetric(horizontal=8, vertical=2),
                     ),
-                    expand=True, alignment=ft.alignment.Alignment(0,0),
+                    expand=True, alignment=ft.alignment.center,
                 ),
             ], spacing=1),
             bgcolor=bg,
@@ -610,7 +485,7 @@ def build_mapa(page, state):
         size=9, color=MUTED, italic=True,
     )
 
-    tabla_card = tarjeta(ft.Column([ #tabla de epidemiologia 
+    tabla_card = tarjeta(ft.Column([
         ft.Text("Proyección Epidemiológica", size=13, weight=ft.FontWeight.BOLD, color=TEXT),
         tabla_header,
         ft.Divider(height=1, color=BORDER),
@@ -643,7 +518,7 @@ def build_calculadora(page, state):
     result_txt   = ft.Text("—", size=52, weight=ft.FontWeight.W_900, color=ACCENT)
     nivel_txt    = ft.Text("—", size=14, weight=ft.FontWeight.BOLD, color=MUTED)
     prob_txt     = ft.Text("Prob. RI: —", size=12, color=MUTED)
-    #mc_resultado = ft.Column([], visible=False)
+    mc_resultado = ft.Column([], visible=False)
     mc_btn_txt   = ft.Text("⚡  Simulación Monte Carlo (1000 iter.)", size=13,
                             weight=ft.FontWeight.BOLD, color="#000000")
 
@@ -651,9 +526,11 @@ def build_calculadora(page, state):
     desglose_bars = {}
     desglose_rows = []
     for v in VARIABLES:
-        bar_inner = ft.Container(bgcolor=v["color"], border_radius=3,height=7, width=0)
+        bar_inner = ft.Container(bgcolor=v["color"], border_radius=3,
+                                  height=7, width=0)
         bar_outer = ft.Container(
-            content=bar_inner,bgcolor=BORDER, border_radius=3, height=7,
+            content=bar_inner,
+            bgcolor=BORDER, border_radius=3, height=7,
             expand=True, clip_behavior=ft.ClipBehavior.HARD_EDGE,
         )
         val_lbl = ft.Text("0.000", size=10, color=v["color"], width=38,
@@ -684,7 +561,7 @@ def build_calculadora(page, state):
             "IC":  WEIGHTS["IC"]  * (1 - slider_vals["IC"]),
             "ED":  WEIGHTS["ED"]  * (1 - slider_vals["ED"]),
             "EAR": WEIGHTS["EAR"] * slider_vals["EAR"],
-            "IMP": WEIGHTS["IMP"]  * slider_vals["IMP"], #impportante
+            "IM":  WEIGHTS["IM"]  * slider_vals["IM"],
         }
         for k, (bar, lbl) in desglose_bars.items():
             bar.width = contribs[k] * 600
@@ -715,33 +592,10 @@ def build_calculadora(page, state):
             expand=True,
         )
         slider_widgets.append((v["key"], slider_val_lbl, s))
-        slider_val_lbls[v["key"]] = slider_val_lbl
-        slider_val_lbls = {k: lbl for k, lbl, _ in slider_widgets}
-     
-        def aplicar_valorslider(nuevos_valores: dict, origen: str =""):
-         for key, valor in nuevos_valores.items():
-             nuevos_valores[key] = valor 
-             state[f"slider_{key}"] = valor
-             slider_val_lbls[key].value = f"{val:.2f}"
-             for k, lbll, s in slider_widgets:
-                 if k == key:
-                     s.value = valor #del dato en cambio
-                     lbll.value = valor
-         if origen:
-            origen_txt.value = f"Valores cargados desde {origen}"
-            origen_txt.color = ACCENT
-            actualizar_resultado()             
-        
-        origen_txt =ft.Text("",size = 11, color = MUTED, italic =True)
-        def encuesta_completa(respuestas: dict):
-            encuesta_card.visible = False
-            aplicar_valorslider(respuestas,"Encuesta") #conexion con el cuadro de encuesta 
-            encuesta_w = build_encuesta(page, encuesta_completa)
-            
-            encuesta_card = ft.Container(
-            content=encuesta_w,visible=True,
-            )
-            
+
+    slider_val_lbls = {k: lbl for k, lbl, _ in slider_widgets}
+
+    # Presets
     def set_preset(idx):
         m = MUNICIPIOS[idx]
         for v in VARIABLES:
@@ -752,37 +606,21 @@ def build_calculadora(page, state):
             s.value   = slider_vals[k]
         actualizar_resultado()
 
-    # Crear botones presets
-    preset_buttons = []
-    for i, m in enumerate(MUNICIPIOS):
-        def make_on_click(idx):
-            return lambda e: set_preset(idx)
-        preset_buttons.append(
-            ft.FilledTonalButton(
-                m["nombre"].split()[0],
-                on_click=make_on_click(i),
-                style=ft.ButtonStyle(bgcolor=CARD, color=TEXT),
-            )
+    presets_row = ft.Row([
+        ft.FilledTonalButton(
+            m["nombre"].split()[0],
+            on_click=lambda e, i=i: set_preset(i),
+            style=ft.ButtonStyle(bgcolor=CARD, color=TEXT),
         )
-    preset_buttons.append(
+        for i, m in enumerate(MUNICIPIOS)
+    ] + [
         ft.FilledTonalButton(
             "Custom",
             on_click=lambda e: None,
             style=ft.ButtonStyle(bgcolor=CARD, color=TEXT),
         )
-    )
+    ], spacing=8, scroll=ft.ScrollMode.AUTO)
 
-    presets_row = ft.Row(preset_buttons, spacing=8, scroll=ft.ScrollMode.AUTO)
-    
-    def togg_encuesta(e):
-        encuesta_card.visible = not encuesta_card.visible
-        toggle_btn_txt.value = (
-            "ocultar encuesta" if encuesta_card.visible
-            else "Llenar desde encuesta"
-        )
-        page.update()
-        
-        toggle_btn_txt = ft.Text("Ocultar Encuesta", size=13, weight=ft.FontWeight.BOLD, color= "#000000")
     # Tarjetas slider
     slider_cards = []
     for v, (key, val_lbl, s) in zip(VARIABLES, slider_widgets):
@@ -792,7 +630,7 @@ def build_calculadora(page, state):
                     ft.Container(
                         content=ft.Text(v["icon"], size=15),
                         bgcolor=v["color"]+"22", border_radius=8,
-                        width=30, height=30, alignment=ft.alignment.Alignment(0,0),
+                        width=30, height=30, alignment=ft.alignment.center,
                     ),
                     ft.Column([
                         ft.Text(v["label"], size=13, weight=ft.FontWeight.W_600, color=TEXT),
@@ -843,8 +681,8 @@ def build_calculadora(page, state):
             ),
         ], spacing=10),
         gradient=ft.LinearGradient(
-            begin=ft.alignment.Alignment(-1,-1),
-            end=ft.alignment.Alignment(1,1),
+            begin=ft.alignment.top_left,
+            end=ft.alignment.bottom_right,
             colors=["#0f2441","#1a0a2e"],
         ),
         border=ft.border.all(1, BORDER),
@@ -914,7 +752,7 @@ def build_calculadora(page, state):
         presets_row,
         ft.Container(height=8),
         tarjeta(ft.Text(
-            "IARRI = 0.20(1−AV) + 0.25(1−IC) + 0.15(1−ED) + 0.25(EAR) + 0.15(IMP)",
+            "IARRI = 0.20(1−AV) + 0.25(1−IC) + 0.15(1−ED) + 0.25(EAR) + 0.15(IM)",
             size=10, color=ACCENT, font_family="monospace",
         )),
         ft.Container(height=10),
@@ -993,7 +831,7 @@ def build_recomendaciones(page, state):
                             ft.Container(
                                 content=ft.Text(r["icon"], size=22),
                                 bgcolor=r["color"]+"22", border_radius=10,
-                                width=44, height=44, alignment=ft.alignment.Alignment(0,0),
+                                width=44, height=44, alignment=ft.alignment.center,
                             ),
                             ft.Column([
                                 ft.Text(r["titulo"], size=13, weight=ft.FontWeight.W_600, color=TEXT),
@@ -1013,8 +851,8 @@ def build_recomendaciones(page, state):
         )
 
     # Simulación Cuautlancingo
-    antes   = {"AV":0.30,"IC":0.20,"ED":0.10,"EAR":0.80,"IMP":0.70}
-    despues = {"AV":0.55,"IC":0.45,"ED":0.30,"EAR":0.80,"IMP":0.70}
+    antes   = {"AV":0.30,"IC":0.20,"ED":0.10,"EAR":0.80,"IM":0.70}
+    despues = {"AV":0.55,"IC":0.45,"ED":0.30,"EAR":0.80,"IM":0.70}
     cambios = [("AV","0.30→0.55",LOW),("IC","0.20→0.45",ACCENT),("ED","0.10→0.30",ACCENT3)]
     sim_rows = [
         ft.Row([
@@ -1147,18 +985,17 @@ def build_recomendaciones(page, state):
 #  APP PRINCIPAL
 # ═══════════════════════════════════════════════════════════
 def main(page: ft.Page):
-    page.title       = "ARQ:-Metabólica MX"
+    page.title       = "ARQ-Metabólica MX"
     page.bgcolor     = BG
     page.padding     = 0
     page.theme_mode  = ft.ThemeMode.DARK
     page.fonts       = {}
-    page.window.width  = 400
-    page.window.height = 800
+    page.window_width  = 400
+    page.window_height = 800
 
     # Estado compartido
-    state = {"muni_idx": 0, "tab": 0, "refresh": None}
-    state["refresh"] = None
-    #municipio y estado de visualizancion de pestaña
+    state = {"muni_idx": 0, "tab": 0}
+
     # Área de contenido
     content_area = ft.Container(
         expand=True,
@@ -1172,33 +1009,31 @@ def main(page: ft.Page):
 
     def build_screen(idx):
         builders = [build_inicio, build_mapa, build_calculadora, build_recomendaciones]
-        return builders[idx](page, state) #erors  por mapa :v(resuelto)
+        return builders[idx](page, state)
 
     def switch_tab(idx):
         state["tab"] = idx
-        nav_items.clear()
-        
-        for i in range(4):
-            nav_items.append(make_nav(i, active=(i == idx)))
-        nav_bar.content = ft.Row(nav_items, expand=True,
-                                 alignment=ft.MainAxisAlignment.SPACE_AROUND) #errors
+        for i, item in enumerate(nav_items):
+            item.controls[0].color  = ACCENT if i == idx else MUTED
+            item.controls[1].color  = ACCENT if i == idx else MUTED
+            item.controls[1].weight = ft.FontWeight.BOLD if i == idx else ft.FontWeight.NORMAL
         content_area.content = build_screen(idx)
         page.update()
 
-    def make_nav(idx,active=False):
-        #indicator = ft.Container(
-            #height=3, width=32, bgcolor=ACCENT,
-            #border_radius=2,
-            #visible=(idx == 0),
-        #)
+    def make_nav(idx):
+        indicator = ft.Container(
+            height=3, width=32, bgcolor=ACCENT,
+            border_radius=2,
+            visible=(idx == 0),
+        )
         return ft.GestureDetector(
             content=ft.Column([
                 ft.Text(nav_icons[idx], size=22,
-                        color=ACCENT if active else MUTED,
+                        color=ACCENT if idx==0 else MUTED,
                         text_align=ft.TextAlign.CENTER),
                 ft.Text(nav_labels[idx], size=10,
-                        color=ACCENT if active else MUTED,
-                        weight=ft.FontWeight.BOLD if active else ft.FontWeight.NORMAL,
+                        color=ACCENT if idx==0 else MUTED,
+                        weight=ft.FontWeight.BOLD if idx==0 else ft.FontWeight.NORMAL,
                         text_align=ft.TextAlign.CENTER),
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                spacing=3, expand=True),
@@ -1208,18 +1043,17 @@ def main(page: ft.Page):
 
     # Función para refrescar pantalla inicio al cambiar municipio
     def refresh():
-        if state.get("tab") == 0:
+        if state["tab"] == 0:
             content_area.content = build_screen(0)
             page.update()
-            #estaa funcion me permite refrescar los botones de los municipios
     state["refresh"] = refresh
 
     for i in range(4):
         nav_items.append(make_nav(i))
 
-    nav_bar = ft.Container( #configuracion de barra de auxiliar de menu de opciones
+    nav_bar = ft.Container(
         content=ft.Row(nav_items, expand=True,
-                        alignment=ft.MainAxisAlignment .SPACE_AROUND),
+                        alignment=ft.MainAxisAlignment.SPACE_AROUND),
         bgcolor=SURFACE,
         border=ft.border.only(top=ft.BorderSide(1, BORDER)),
         padding=ft.padding.symmetric(vertical=10),

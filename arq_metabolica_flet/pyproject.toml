@@ -1,0 +1,11 @@
+[app]
+module = main
+org = mx.arqmetabolica
+product = ARQ-Metabólica MX
+description = Índice Arquitectónico de Riesgo de Resistencia a la Insulina
+
+[flutter]
+android_adaptive_icon_background = "#0a0e1a"
+
+[project]
+requires = ["flet==0.82.2", "numpy", "scipy"]

@@ -1,8 +1,9 @@
 """
 ARQ-Metabólica MX — App Móvil con Flet (Python + Flutter)
 Índice Arquitectónico de Riesgo de Resistencia a la Insulina (IARRI-MX)
+CON INTEGRACIÓN MySQL Workbench
 
-Instalar:  pip install flet numpy scipy
+Instalar:  pip install flet numpy scipy mysql-connector-python
 Correr:    python main.py
 APK:       flet build apk
 iOS:       flet build ipa
@@ -11,14 +12,22 @@ iOS:       flet build ipa
 import flet as ft
 import numpy as np
 import threading
-import math
+
+# ── Importar módulo de base de datos ──────────────────────
+from database import (
+    init_db,
+    get_municipios,
+    get_estadisticas_municipio,
+    guardar_calculo,
+    guardar_encuesta,
+)
 
 # ═══════════════════════════════════════════════════════════
 #  PALETA DE COLORES
 # ═══════════════════════════════════════════════════════════
 BG       = "#0a0e1a"
 SURFACE  = "#111827"
-CARD     = "#161f35" #COLOR   
+CARD     = "#161f35"
 BORDER   = "#1e2d4a"
 ACCENT   = "#00e5c8"
 ACCENT2  = "#ff6b35"
@@ -33,60 +42,17 @@ WHITE    = "#ffffff"
 # ═══════════════════════════════════════════════════════════
 #  MODELO MATEMÁTICO IARRI-MX
 # ═══════════════════════════════════════════════════════════
-WEIGHTS = {"AV": 0.9, "IC": 0.25, "ED": 0.15, "EAR": 0.25, "IMP": 0.15} #cambio indice de poblacion para obtener la resistencia
-#COLUMNAS DE CUADRO DEBAJO DE LOS COLORES VERDE,AMARILLO Y ROJP
-MUNICIPIOS = [
-    {"nombre": "San Andrés Cholula",      "AV": 0.80, "IC": 0.60, "ED": 0.40, "EAR": 0.45, "IMP": 0.10},
-    {"nombre": "San Pablo Xochimehuacan", "AV": 0.50, "IC": 0.35, "ED": 0.20, "EAR": 0.60, "IMP": 0.55},
-    {"nombre": "Cuautlancingo",           "AV": 0.30, "IC": 0.20, "ED": 0.10, "EAR": 0.80, "IMP": 0.70},
-]
-ENCUESTA = [
-    {
-        "variable": "AV",#acceso aeas verdes
-        "pregunta":"¿Como consideras tu estilo de vida",
-        "opciones": [
-          {"texto": "Activo con servicios completos y lugares tranquilos para caminar.", "valor": 0.0},
-          {"texto": "Inactivo con servicios y problemas de salud(actualmente) sin poder salir a un lugar a caminar.", "valor": 0.0},
-          {"texto": "Prefiero no responder la pregunta", "valor": 0.0}  
-        ],
-    },
-    {
-        
-        "variable": "IC", #indice de actividad fisica
-        "pregunta": "¿Cuantas horas pasas al dia sentado?",
-        "opciones": [
-             {"texto":"Menos de dos horas al dia", "valor": 0.0},
-             {"texto":"Mas de seis horas al dia", "valor": 0.0},
-             {"texto":"Menos de una hora o quince minutos al dia", "valor": 0.0 },
-        ], 
-    },
-    {
-        "Variable": "ED", #entrenamiento deportivo
-        "pregunta": "¿Practica algun deporte, y soporta los sintomas del ritmo cardiaco elevado  que le produce?",
-        "opciones": [
-          {"texto": "Si entreno de forma constante.", "valor":0.0},
-          {"texto": "No practico ningun deporte.", "valor":0.0},
-          {"texto": "Puedo hacerlo media hora y ya.","valor":0.0}, 
-        ],
-        #"2 pregg"
-    },
-    {
-        "Variable": "EAR", #entorno alimentario riesgoso
-        "pregunta": "Con que frecuencia consume azucar como productos empaquetados.",
-        "opciones": [
-          {"texto": "Lo hago al menos una vez a la semana.", "valor": 0.0},
-          {"texto": "No consumo ese tipo de alimentos.", "valor":0.0},
-          
-        ],
-    },    
-]
+WEIGHTS = {"AV": 0.20, "IC": 0.25, "ED": 0.15, "EAR": 0.25, "IM": 0.15}
+
+# MUNICIPIOS se carga desde la BD en tiempo de ejecución
+MUNICIPIOS = []
 
 VARIABLES = [
-    {"key": "AV",  "label": "Áreas Verdes",                "icon": "🌳", "color": LOW,    "inv": True,  "desc": "Estándar OMS 9 m²/hab"},
-    {"key": "IC",  "label": "Índice Caminabilidad",         "icon": "🚶", "color": ACCENT, "inv": True,  "desc": "Intersecciones + banquetas"},
-    {"key": "ED",  "label": "Equipamiento Deportivo",       "icon": "⚽", "color": ACCENT3,"inv": True,  "desc": "Equipamientos / población"},
-    {"key": "EAR", "label": "Entorno Alimentario Riesgoso(LUGARES)", "icon": "🍟", "color": ACCENT2,"inv": False, "desc": "Tiendas ultraprocesados / total"},
-    {"key": "IMP",  "label": "Índice de Marginación",        "icon": "📉", "color": MID,    "inv": False, "desc": "CONAPO normalizado"},
+    {"key": "AV",  "label": "Áreas Verdes",                     "icon": "🌳", "color": LOW,    "inv": True,  "desc": "Estándar OMS 9 m²/hab"},
+    {"key": "IC",  "label": "Índice Caminabilidad",              "icon": "🚶", "color": ACCENT, "inv": True,  "desc": "Intersecciones + banquetas"},
+    {"key": "ED",  "label": "Entrenamientos con Actividad Fisica","icon": "⚽", "color": ACCENT3,"inv": True,  "desc": "Equipamientos / población"},
+    {"key": "EAR", "label": "Habitos Alimentarios",              "icon": "🍟", "color": ACCENT2,"inv": False, "desc": "Tiendas ultraprocesados / total"},
+    {"key": "IM",  "label": "Índice de Marginación",             "icon": "📉", "color": MID,    "inv": False, "desc": "CONAPO normalizado"},
 ]
 
 RECOMENDACIONES = [
@@ -106,9 +72,13 @@ BADGES = [
     {"emoji": "🔬", "nombre": "Investigador IARRI",     "earned": False},
 ]
 
-def calc_iarri(AV, IC, ED, EAR, IMP): #AV =iNDICE DE AREAS VERDES
-    return (WEIGHTS["AV"]/(AV) + WEIGHTS["IC"] + (1-IC) / 3 +
-            WEIGHTS["ED"]/ (1-ED) + WEIGHTS["EAR"]*EAR + WEIGHTS["IMP"]/IMP)
+
+# ═══════════════════════════════════════════════════════════
+#  FUNCIONES MATEMÁTICAS
+# ═══════════════════════════════════════════════════════════
+def calc_iarri(AV, IC, ED, EAR, IM):
+    return (WEIGHTS["AV"]*(1-AV) + WEIGHTS["IC"]*(1-IC) +
+            WEIGHTS["ED"]*(1-ED) + WEIGHTS["EAR"]*EAR + WEIGHTS["IM"]*IM)
 
 def nivel_riesgo(v):
     if v <= 0.33: return "Bajo",  LOW
@@ -122,16 +92,34 @@ def monte_carlo(base, n=1000, sigma=0.12):
     res = []
     for _ in range(n):
         v = {k: max(0, min(1, base[k] + np.random.uniform(-sigma, sigma)))
-             for k in ["AV","IC","ED","EAR","IMP"]}
+             for k in ["AV","IC","ED","EAR","IM"]}
         res.append(calc_iarri(**v))
     arr = np.array(res)
     return arr, arr.mean(), arr.std(), np.percentile(arr,2.5), np.percentile(arr,97.5)
+
+# ═══════════════════════════════════════════════════════════
+#  CARGA DE MUNICIPIOS DESDE BD
+# ═══════════════════════════════════════════════════════════
+def cargar_municipios_bd():
+    """Carga municipios desde MySQL y actualiza la lista global."""
+    global MUNICIPIOS
+    datos = get_municipios()
+    if datos:
+        MUNICIPIOS = datos
+        print(f"[DB] {len(MUNICIPIOS)} municipios cargados desde MySQL ✓")
+    else:
+        # Fallback a datos hardcoded si no hay conexión
+        MUNICIPIOS = [
+            {"id": None, "nombre": "San Andrés Cholula",      "AV": 0.80, "IC": 0.60, "ED": 0.40, "EAR": 0.45, "IM": 0.10},
+            {"id": None, "nombre": "San Pablo Xochimehuacan", "AV": 0.50, "IC": 0.35, "ED": 0.20, "EAR": 0.60, "IM": 0.55},
+            {"id": None, "nombre": "Cuautlancingo",           "AV": 0.30, "IC": 0.20, "ED": 0.10, "EAR": 0.80, "IM": 0.70},
+        ]
+        print("[DB] ⚠ Sin conexión MySQL, usando datos locales")
 
 
 # ═══════════════════════════════════════════════════════════
 #  COMPONENTES UI REUTILIZABLES
 # ═══════════════════════════════════════════════════════════
-
 def tarjeta(content, padding=14, color=CARD, border=True):
     return ft.Container(
         content=content,
@@ -144,88 +132,7 @@ def tarjeta(content, padding=14, color=CARD, border=True):
 def titulo_seccion(texto):
     return ft.Text(texto, size=11, weight=ft.FontWeight.BOLD,
                    color=MUTED, font_family="monospace")
-def build_encuesta(page, on_complete): #cambio bb
-    respuestas =()
-    paso_actual = [0]
-    contenido =ft.Column([],spacing=12, scroll =ft.ScrollMode.AUTO)
-    progreso_txt = ft.Text("",size=11, color=MUTED)
-    progreso_bar_inner = ft.Container(bgcolor=ACCENT, border_radius=4, height=4, width=0)
-    progreso_bar = ft.Container(
-        content = progreso_bar_inner,
-        bgcolor=BORDER, border_radius=4, height=4, expand=True, clip_behavior=ft.ClipBehavior.HAT
-        
-    )
-    
-    def render_paso():
-        idx = paso_actual[0] 
-        total = len(ENCUESTA)
-        progreso_txt.value = f"Pregunta {idx+1} de {total}"
-        progreso_bar_inner.width = (idx / total) * 600 
-          
-        q = ENCUESTA[idx]
-        v = next( var for var in VARIABLES if var["key"] == q["variable"])
-        
-        botones = []
-        for op in q["opciones"]:
-            def make_click(valor, variable):
-                def on_click(e):
-                    respuestas[variable] = valor
-                    if paso_actual[0] < len(ENCUESTA) - 1:
-                        paso_actual[0] += 1
-                        render_paso()
-                    else:
-                        on_complete(respuestas)
-                return on_click
-        botones.append(
-            
-            ft.Container(
-                content=ft.Row([
-                    ft.Container(
-                        content=ft.Text(v["icon"], size= 16),
-                        bgcolor=v["color"] + "22",
-                        border_radius=8,
-                        width=34, height=34,
-                        alignment=fr.alignment.Alignment(0, 0),
-                    ),
-                    ft.Text(op["texto"],size=13, color= TEXT, expand=True),
-                ], spacing=10),
-                bgcolor=CARD,
-                border= ft.border.all(1, v["color"] + "55"),
-                border_radius=12,
-                padding= ft.padding.symetric(horizontal=14, vertical=12),
-                ink=True,
-                on_click=make_click(op["valor"], q["variable"]),
-            )
-        )    
-        
-        contenido.controls = [
-            ft.Container(height=4),
-            ft.Row([
-            ft.Container(
-                content = ft.Text(v["icon"], size=22),
-                bgcolor = v["color"] + "22",
-                border_radius =12,
-                width=48,height=48,
-                alignment=ft.alignment.Aligment(0,0),
-            ),
-            ft.Colum([
-                ft.Text(v["label"],size=12, color=v["color"],weight=ft.FontWeight.BOLD),
-                ft.Text(q["pregunta"], size=15, color=TEXT,weight=ft.FontWeight.W_600),
-                
-            ], spacing=2, expand=True),
-            ], spacing=12, vertical_alignment=ft.CrossAxiAlignment.CENTER),
-            ft.Container(height=8),
-            *botones,
-        ]    
-        page.update() 
-    
-    render_paso()
-    
-    return ft.Column([
-        
-    ])       
-                 
-                    
+
 def badge_riesgo(nivel, color):
     return ft.Container(
         content=ft.Row([
@@ -238,54 +145,27 @@ def badge_riesgo(nivel, color):
         padding=ft.padding.symmetric(horizontal=12, vertical=5),
     )
 
-def barra_progreso(valor, color, height=5):
-    return ft.Stack([
-        ft.Container(height=height, border_radius=3, bgcolor=BORDER, expand=True),
-        ft.Container(
-            height=height, border_radius=3, bgcolor=color,
-            width=max(0, min(1, valor)) * 300,   # se ajusta con expand abajo
-        ),
-    ], expand=True)
-
-def progress_bar_row(valor, color, height=6):
-    """Barra de progreso que usa expand correctamente."""
-    return ft.Container(
-        content=ft.Container(
-            bgcolor=color,
-            border_radius=3,
-            height=height,
-            expand=False,
-        ),
-        bgcolor=BORDER,
-        border_radius=3,
-        height=height,
-        expand=True,
-        clip_behavior=ft.ClipBehavior.HARD_EDGE,
-        # Usamos overlay para simular el fill
-    )
-
 
 # ═══════════════════════════════════════════════════════════
-#  PANTALLA 1 — INICIO
+#  PANTALLA 1 — INICIO  (con estadísticas BD)
 # ═══════════════════════════════════════════════════════════
 def build_inicio(page, state):
     muni_idx = state["muni_idx"]
-    muni     = MUNICIPIOS[muni_idx] #municipios
-    iarri    = calc_iarri(muni["AV"], muni["IC"], muni["ED"], muni["EAR"], muni["IMP"])
+    muni     = MUNICIPIOS[muni_idx]
+    iarri    = calc_iarri(muni["AV"], muni["IC"], muni["ED"], muni["EAR"], muni["IM"])
     nivel, col = nivel_riesgo(iarri)
-    
-    def cambiar_muni(idx):#LLAMADA DE MUNICIOUI
+
+    def cambiar_muni(idx):
         state["muni_idx"] = idx
         state["refresh"]()
 
-    # Chips de municipio
-    #correccion en content para acceder a la segunda pestaña por division de texto del nombre de municipio
     chips = ft.Row([
         ft.GestureDetector(
             content=ft.Container(
-                content=ft.Text(m["nombre"].split()[0] + " " + m["nombre"].split()[1] if len(m["nombre"].split()) > 1 else m["nombre"].split()[0],
-                                size=11, weight=ft.FontWeight.W_600,
-                                color="#000000" if i == muni_idx else MUTED),
+                content=ft.Text(
+                    m["nombre"],
+                    size=11, weight=ft.FontWeight.W_600,
+                    color="#000000" if i == muni_idx else MUTED),
                 bgcolor=ACCENT if i == muni_idx else CARD,
                 border=ft.border.all(1, ACCENT if i == muni_idx else BORDER),
                 border_radius=20,
@@ -296,7 +176,6 @@ def build_inicio(page, state):
         for i, m in enumerate(MUNICIPIOS)
     ], spacing=8, scroll=ft.ScrollMode.AUTO)
 
-    # Semáforo
     def dot(c, activo):
         return ft.Container(
             width=16, height=16, border_radius=8,
@@ -312,7 +191,32 @@ def build_inicio(page, state):
         ft.Text(f"Nivel {nivel}", size=12, color=MUTED),
     ], spacing=10)
 
-    # Hero card
+    # ── Estadísticas BD ────────────────────────────────────
+    stats_txt = ft.Text("Cargando estadísticas...", size=10, color=MUTED)
+    stats_card = tarjeta(ft.Column([
+        ft.Text("📊 Datos históricos (MySQL)", size=12, weight=ft.FontWeight.BOLD, color=TEXT),
+        stats_txt,
+    ], spacing=6))
+
+    def cargar_stats():
+        muni_id = muni.get("id")
+        if muni_id:
+            s = get_estadisticas_municipio(muni_id)
+            if s and s.get("total_calculos"):
+                stats_txt.value = (
+                    f"Total cálculos: {s['total_calculos']}  |  "
+                    f"IARRI prom: {(s['iarri_promedio'] or 0):.3f}  |  "
+                    f"Prob.RI prom: {(s['prob_ri_promedio'] or 0)*100:.1f}%\n"
+                    f"Riesgo Bajo: {s['casos_bajo']}  Medio: {s['casos_medio']}  Alto: {s['casos_alto']}"
+                )
+            else:
+                stats_txt.value = "Sin datos históricos aún. Usa la calculadora para generar registros."
+        else:
+            stats_txt.value = "Sin conexión a BD. Revisa database.py"
+        page.update()
+
+    threading.Thread(target=cargar_stats, daemon=True).start()
+
     hero = ft.Container(
         content=ft.Column([
             ft.Text("MUNICIPIO ACTIVO", size=10, color=MUTED,
@@ -345,7 +249,6 @@ def build_inicio(page, state):
         margin=ft.margin.only(bottom=12),
     )
 
-    # Tarjetas de variables
     var_cards = []
     for v in VARIABLES:
         val = muni[v["key"]]
@@ -358,8 +261,7 @@ def build_inicio(page, state):
                         border_radius=10, width=36, height=36,
                         alignment=ft.alignment.Alignment(0,0),
                     ),
-                    ft.Text(f"{val:.2f}", size=20, weight=ft.FontWeight.W_900,
-                            color=v["color"]),
+                    ft.Text(f"{val:.2f}", size=20, weight=ft.FontWeight.W_900, color=v["color"]),
                 ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
                 ft.Text(v["key"], size=13, weight=ft.FontWeight.BOLD, color=TEXT),
                 ft.Text(v["label"], size=10, color=MUTED),
@@ -382,13 +284,12 @@ def build_inicio(page, state):
     grid_row2 = ft.Row([var_cards[2], var_cards[3]], spacing=10, expand=True)
     grid_row3 = ft.Row([var_cards[4]], spacing=10, expand=True)
 
-    # Sensibilidad
     sens_items = [
         ("IC",  0.25, ACCENT,  "Mayor impacto (protector)"),
         ("EAR", 0.25, ACCENT2, "Mayor impacto (riesgo)"),
         ("AV",  0.20, LOW,     "Impacto medio"),
         ("ED",  0.15, ACCENT3, "Impacto moderado"),
-        ("IMP",  0.15, MID,     "Impacto moderado"),
+        ("IM",  0.15, MID,     "Impacto moderado"),
     ]
     sens_rows = []
     for k, val, c, hint in sens_items:
@@ -407,18 +308,15 @@ def build_inicio(page, state):
             ], spacing=8)
         )
 
-    sens_card = tarjeta(ft.Column([ #analisis de derivada parcial
-        ft.Text("∂IARRI — Derivadas Parciales", size=13,
-                weight=ft.FontWeight.BOLD, color=TEXT),
-        ft.Text("Mayor impacto: Caminabilidad (IC) y Entorno Alimentario (EAR)",
-                size=10, color=MUTED),
+    sens_card = tarjeta(ft.Column([
+        ft.Text("∂IARRI — Derivadas Parciales", size=13, weight=ft.FontWeight.BOLD, color=TEXT),
+        ft.Text("Mayor impacto: Caminabilidad (IC) y Entorno Alimentario (EAR)", size=10, color=MUTED),
         *sens_rows,
     ], spacing=8))
 
-    # Fórmula
     formula_card = tarjeta(ft.Column([
         ft.Text("Fórmula del Modelo", size=11, color=MUTED),
-        ft.Text("IARRI = 0.20(1−AV) + 0.25(1−IC)\n       + 0.15(1−ED) + 0.25(EAR) + 0.15(IMP)",
+        ft.Text("IARRI = 0.20(1−AV) + 0.25(1−IC)\n       + 0.15(1−ED) + 0.25(EAR) + 0.15(IM)",
                 size=11, color=ACCENT, font_family="monospace"),
         ft.Row([
             ft.Container(content=ft.Text("  0.00–0.33  Bajo  ", size=10, color=LOW),
@@ -437,6 +335,10 @@ def build_inicio(page, state):
         grid_row1, ft.Container(height=8), grid_row2,
         ft.Container(height=8), grid_row3,
         ft.Container(height=14),
+        titulo_seccion("DATOS HISTÓRICOS — MySQL"),
+        ft.Container(height=6),
+        stats_card,
+        ft.Container(height=14),
         titulo_seccion("ANÁLISIS DE SENSIBILIDAD"),
         ft.Container(height=6),
         sens_card,
@@ -450,57 +352,37 @@ def build_inicio(page, state):
 #  PANTALLA 2 — MAPA / COMPARACIÓN
 # ═══════════════════════════════════════════════════════════
 def build_mapa(page, state):
+    # Calcular IARRI real de cada municipio
+    iarri_munis = {m["nombre"]: calc_iarri(m["AV"],m["IC"],m["ED"],m["EAR"],m["IM"]) for m in MUNICIPIOS}
+    nombres_cortos = {m["nombre"]: m["nombre"].split()[1] if len(m["nombre"].split()) > 1 else m["nombre"].split()[0] for m in MUNICIPIOS}
 
-    # Mapa SVG con heatmaps on
+    def label_mapa(nombre, color, left, top):
+        iv = iarri_munis.get(nombre, 0)
+        return ft.Container(content=ft.Column([
+            ft.Text(nombres_cortos.get(nombre, nombre), size=10, weight=ft.FontWeight.BOLD, color=color),
+            ft.Text(f"IARRI: {iv:.2f}", size=8, color=MUTED),
+        ], spacing=1, horizontal_alignment=ft.CrossAxisAlignment.CENTER), left=left, top=top)
+
+    n0 = MUNICIPIOS[0]["nombre"] if len(MUNICIPIOS) > 0 else ""
+    n1 = MUNICIPIOS[1]["nombre"] if len(MUNICIPIOS) > 1 else ""
+    n2 = MUNICIPIOS[2]["nombre"] if len(MUNICIPIOS) > 2 else ""
+    c0 = LOW  if iarri_munis.get(n0,0) <= 0.33 else (MID if iarri_munis.get(n0,0) <= 0.66 else HIGH)
+    c1 = LOW  if iarri_munis.get(n1,0) <= 0.33 else (MID if iarri_munis.get(n1,0) <= 0.66 else HIGH)
+    c2 = LOW  if iarri_munis.get(n2,0) <= 0.33 else (MID if iarri_munis.get(n2,0) <= 0.66 else HIGH)
+
     mapa_svg = ft.Container(
         content=ft.Stack([
-            # Fondo
             ft.Container(bgcolor=CARD, expand=True, border_radius=16),
-            # Heatmap blobs usando Containers con opacidad
-            ft.Container(
-                width=140, height=110, border_radius=70,
-                bgcolor=LOW + "33",
-                left=20, top=20,
-            ),
-            ft.Container(
-                width=130, height=100, border_radius=65,
-                bgcolor=MID + "33",
-                left=130, top=60,
-            ),
-            ft.Container(
-                width=150, height=110, border_radius=75,
-                bgcolor=HIGH + "33",
-                left=220, top=80,
-            ),
-            # Labels municipios
-            ft.Container(
-                content=ft.Column([
-                    ft.Text("San Andrés", size=10, weight=ft.FontWeight.BOLD, color=LOW),
-                    ft.Text("IARRI: 0.36", size=8, color=MUTED),
-                ], spacing=1, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-                left=20, top=10,
-            ),
-            ft.Container(
-                content=ft.Column([
-                    ft.Text("San Pablo", size=10, weight=ft.FontWeight.BOLD, color=MID),
-                    ft.Text("IARRI: 0.62", size=8, color=MUTED),
-                ], spacing=1, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-                left=145, top=42,
-            ),
-            ft.Container(
-                content=ft.Column([
-                    ft.Text("Cuautlancingo", size=10, weight=ft.FontWeight.BOLD, color=HIGH),
-                    ft.Text("IARRI: 0.78", size=8, color=MUTED),
-                ], spacing=1, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-                left=228, top=60,
-            ),
-            # Íconos áreas verdes
+            ft.Container(width=140, height=110, border_radius=70, bgcolor=c0+"33", left=20, top=20),
+            ft.Container(width=130, height=100, border_radius=65, bgcolor=c1+"33", left=130, top=60),
+            ft.Container(width=150, height=110, border_radius=75, bgcolor=c2+"33", left=220, top=80),
+            label_mapa(n0, c0, 20, 10),
+            label_mapa(n1, c1, 145, 42),
+            label_mapa(n2, c2, 228, 60),
             ft.Container(content=ft.Text("🌳", size=14), left=55, top=55),
             ft.Container(content=ft.Text("🌳", size=12), left=80, top=75),
-            # Íconos ultraprocesados
             ft.Container(content=ft.Text("🍟", size=12), left=265, top=110),
             ft.Container(content=ft.Text("🍟", size=11), left=285, top=128),
-            # Deportivo
             ft.Container(content=ft.Text("⚽", size=12), left=170, top=90),
         ]),
         height=175,
@@ -510,7 +392,6 @@ def build_mapa(page, state):
         margin=ft.margin.only(bottom=8),
     )
 
-    # Leyenda
     leyenda = ft.Row([
         ft.Row([ft.Container(width=10, height=10, border_radius=5, bgcolor=LOW),
                 ft.Text("Áreas verdes", size=11, color=MUTED)], spacing=5),
@@ -520,9 +401,8 @@ def build_mapa(page, state):
                 ft.Text("Deporte", size=11, color=MUTED)], spacing=5),
     ], spacing=14)
 
-    # Comparativa municipal
     munis_sorted = sorted(
-        [{**m, "iarri": calc_iarri(m["AV"],m["IC"],m["ED"],m["EAR"],m["IMP"])}
+        [{**m, "iarri": calc_iarri(m["AV"],m["IC"],m["ED"],m["EAR"],m["IM"])}
          for m in MUNICIPIOS],
         key=lambda x: x["iarri"]
     )
@@ -532,8 +412,7 @@ def build_mapa(page, state):
         muni_rows.append(
             ft.Container(
                 content=ft.Row([
-                    ft.Text(f"#{i+1}", size=18, weight=ft.FontWeight.W_900,
-                            color=MUTED, width=30),
+                    ft.Text(f"#{i+1}", size=18, weight=ft.FontWeight.W_900, color=MUTED, width=30),
                     ft.Column([
                         ft.Text(m["nombre"], size=13, weight=ft.FontWeight.W_600, color=TEXT),
                         ft.Container(
@@ -547,15 +426,11 @@ def build_mapa(page, state):
                     ft.Text(f"{m['iarri']:.2f}", size=18, weight=ft.FontWeight.W_900,
                             color=col, width=44),
                 ], spacing=12, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-                bgcolor=CARD,
-                border=ft.border.all(1, BORDER),
-                border_radius=14,
-                padding=14,
-                margin=ft.margin.only(bottom=8),
+                bgcolor=CARD, border=ft.border.all(1, BORDER),
+                border_radius=14, padding=14, margin=ft.margin.only(bottom=8),
             )
         )
 
-    # Tabla epidemiológica
     def header_cell(txt, flex=1):
         return ft.Container(
             content=ft.Text(txt, size=10, color=MUTED, weight=ft.FontWeight.BOLD,
@@ -563,8 +438,7 @@ def build_mapa(page, state):
             expand=flex, padding=ft.padding.symmetric(vertical=8, horizontal=4),
             bgcolor=SURFACE,
         )
-    
-    #funcion para los datos de mapa y los municipios
+
     def data_cell(txt, color=TEXT, flex=1, bold=False):
         return ft.Container(
             content=ft.Text(txt, size=11, color=color,
@@ -580,21 +454,21 @@ def build_mapa(page, state):
         header_cell("Nivel", 1),
     ], spacing=1)
 
-    tabla_rows = [] #columna de datos de tabla
+    tabla_rows = []
     for i, m in enumerate(MUNICIPIOS):
-        iarri = calc_iarri(m["AV"],m["IC"],m["ED"],m["EAR"],m["IMP"])
-        niv, col = nivel_riesgo(iarri) #funcion de IARRI 
+        iarri = calc_iarri(m["AV"],m["IC"],m["ED"],m["EAR"],m["IM"])
+        niv, col = nivel_riesgo(iarri)
         pr = prob_ri(iarri)
         bg = CARD if i%2==0 else SURFACE
         parts = m["nombre"].split()
         name = parts[0] + (" " + parts[1] if len(parts) > 1 else "")
         tabla_rows.append(ft.Container(
-            content=ft.Row([#e
-                data_cell(name, flex=2), #contiene la funcion que va dibujar el panel del mapa
+            content=ft.Row([
+                data_cell(name, flex=2),
                 data_cell(f"{iarri:.2f}", color=col, bold=True),
-                data_cell(f"{pr*100:.0f}%"),#simetria 
+                data_cell(f"{pr*100:.0f}%"),
                 ft.Container(
-                    content=ft.Container( #contenedor de la ventana alrededor
+                    content=ft.Container(
                         content=ft.Text(niv, size=10, color=col, weight=ft.FontWeight.BOLD),
                         bgcolor=col+"22", border=ft.border.all(1,col+"55"),
                         border_radius=8, padding=ft.padding.symmetric(horizontal=8, vertical=2),
@@ -605,18 +479,14 @@ def build_mapa(page, state):
             bgcolor=bg,
         ))
 
-    epi_nota = ft.Text(
-        "Prob(RI) = 0.10 + 0.50 × IARRI  —  Modelo conceptual ENSANUT",
-        size=9, color=MUTED, italic=True,
-    )
-
-    tabla_card = tarjeta(ft.Column([ #tabla de epidemiologia 
+    tabla_card = tarjeta(ft.Column([
         ft.Text("Proyección Epidemiológica", size=13, weight=ft.FontWeight.BOLD, color=TEXT),
         tabla_header,
         ft.Divider(height=1, color=BORDER),
         *tabla_rows,
         ft.Divider(height=1, color=BORDER),
-        epi_nota,
+        ft.Text("Prob(RI) = 0.10 + 0.50 × IARRI  —  Modelo conceptual ENSANUT",
+                size=9, color=MUTED, italic=True),
     ], spacing=2))
 
     return ft.Column([
@@ -634,26 +504,27 @@ def build_mapa(page, state):
 
 
 # ═══════════════════════════════════════════════════════════
-#  PANTALLA 3 — CALCULADORA / SIMULADOR
+#  PANTALLA 3 — CALCULADORA + ENCUESTA + GUARDA EN BD
 # ═══════════════════════════════════════════════════════════
 def build_calculadora(page, state):
+    slider_vals = {v["key"]: state.get(f"slider_{v['key']}", 0.0) for v in VARIABLES}
+    result_txt  = ft.Text("—", size=52, weight=ft.FontWeight.W_900, color=ACCENT)
+    nivel_txt   = ft.Text("—", size=14, weight=ft.FontWeight.BOLD, color=MUTED)
+    prob_txt    = ft.Text("Prob. RI: —", size=12, color=MUTED)
+    mc_btn_txt  = ft.Text("Simulación Monte Carlo (excepcion)", size=13,
+                           weight=ft.FontWeight.BOLD, color="#000000")
+    guardar_msg = ft.Text("", size=11, color=ACCENT)
+    estilo_msg = ft.Text(
+        "Pulsa 'Evaluar Estilo de Vida' para actualizar tus insignias según tu perfil.",
+        size=10, color=MUTED, italic=True,
+    )
 
-    slider_vals = {v["key"]: state.get(f"slider_{v['key']}", 0.5) for v in VARIABLES}
-
-    result_txt   = ft.Text("—", size=52, weight=ft.FontWeight.W_900, color=ACCENT)
-    nivel_txt    = ft.Text("—", size=14, weight=ft.FontWeight.BOLD, color=MUTED)
-    prob_txt     = ft.Text("Prob. RI: —", size=12, color=MUTED)
-    #mc_resultado = ft.Column([], visible=False)
-    mc_btn_txt   = ft.Text("⚡  Simulación Monte Carlo (1000 iter.)", size=13,
-                            weight=ft.FontWeight.BOLD, color="#000000")
-
-    # Barras de desglose
     desglose_bars = {}
     desglose_rows = []
     for v in VARIABLES:
-        bar_inner = ft.Container(bgcolor=v["color"], border_radius=3,height=7, width=0)
+        bar_inner = ft.Container(bgcolor=v["color"], border_radius=3, height=7, width=0)
         bar_outer = ft.Container(
-            content=bar_inner,bgcolor=BORDER, border_radius=3, height=7,
+            content=bar_inner, bgcolor=BORDER, border_radius=3, height=7,
             expand=True, clip_behavior=ft.ClipBehavior.HARD_EDGE,
         )
         val_lbl = ft.Text("0.000", size=10, color=v["color"], width=38,
@@ -668,6 +539,9 @@ def build_calculadora(page, state):
             ], spacing=6)
         )
 
+    # Variables para Monte Carlo (accesible desde guardar)
+    mc_resultados = {"media": None, "desv": None, "ci_lo": None, "ci_hi": None}
+
     def actualizar_resultado():
         iarri = calc_iarri(**slider_vals)
         niv, col = nivel_riesgo(iarri)
@@ -678,20 +552,51 @@ def build_calculadora(page, state):
         nivel_txt.color  = col
         prob_txt.value   = f"Prob. RI: {pr*100:.1f}%"
         prob_txt.color   = col
-        # Desglose
         contribs = {
             "AV":  WEIGHTS["AV"]  * (1 - slider_vals["AV"]),
             "IC":  WEIGHTS["IC"]  * (1 - slider_vals["IC"]),
             "ED":  WEIGHTS["ED"]  * (1 - slider_vals["ED"]),
             "EAR": WEIGHTS["EAR"] * slider_vals["EAR"],
-            "IMP": WEIGHTS["IMP"]  * slider_vals["IMP"], #impportante
+            "IM":  WEIGHTS["IM"]  * slider_vals["IM"],
         }
         for k, (bar, lbl) in desglose_bars.items():
             bar.width = contribs[k] * 600
             lbl.value = f"{contribs[k]:.3f}"
         page.update()
 
-    # Sliders
+    def evaluar_estilo_vida(e=None):
+        actividad = cb_activo.value
+        camina = cb_camina.value
+        ultra = cb_ultra.value
+        verde = cb_verde.value
+        min_ejer = int(min_field.value) if min_field.value else 0
+        iarri = calc_iarri(**slider_vals)
+
+        badges = []
+        for b in BADGES:
+            earned = False
+            if b["nombre"] == "Arquitecto Preventivo":
+                earned = (not ultra and slider_vals["EAR"] <= 0.5)
+            elif b["nombre"] == "Diseñador Bioactivo":
+                earned = verde and slider_vals["AV"] >= 0.5
+            elif b["nombre"] == "Agente Metabólico":
+                earned = actividad and (min_ejer >= 150 or camina)
+            elif b["nombre"] == "Mapeador Urbano":
+                earned = camina or slider_vals["IC"] >= 0.5
+            elif b["nombre"] == "Analista Territorial":
+                earned = camina and slider_vals["IM"] <= 0.5
+            elif b["nombre"] == "Investigador IARRI":
+                earned = mc_resultados["media"] is not None
+            badges.append({**b, "earned": earned})
+
+        state["badges"] = badges
+        lifestyle = "Activo y Preventivo" if actividad and verde and not ultra else (
+            "Moderado" if camina or actividad or verde else "Sedentario"
+        )
+        estilo_msg.value = f"Estilo de vida: {lifestyle}. Insignias actualizadas."
+        estilo_msg.color = ACCENT if lifestyle == "Activo y Preventivo" else (MID if lifestyle == "Moderado" else HIGH)
+        page.update()
+
     slider_widgets = []
     for v in VARIABLES:
         def make_change(key):
@@ -704,7 +609,6 @@ def build_calculadora(page, state):
 
         slider_val_lbl = ft.Text(f"{slider_vals[v['key']]:.2f}", size=15,
                                   weight=ft.FontWeight.W_900, color=v["color"], width=44)
-
         s = ft.Slider(
             min=0, max=1, divisions=100,
             value=slider_vals[v["key"]],
@@ -715,33 +619,38 @@ def build_calculadora(page, state):
             expand=True,
         )
         slider_widgets.append((v["key"], slider_val_lbl, s))
-        slider_val_lbls[v["key"]] = slider_val_lbl
-        slider_val_lbls = {k: lbl for k, lbl, _ in slider_widgets}
-     
-        def aplicar_valorslider(nuevos_valores: dict, origen: str =""):
-         for key, valor in nuevos_valores.items():
-             nuevos_valores[key] = valor 
-             state[f"slider_{key}"] = valor
-             slider_val_lbls[key].value = f"{val:.2f}"
-             for k, lbll, s in slider_widgets:
-                 if k == key:
-                     s.value = valor #del dato en cambio
-                     lbll.value = valor
-         if origen:
-            origen_txt.value = f"Valores cargados desde {origen}"
-            origen_txt.color = ACCENT
-            actualizar_resultado()             
-        
-        origen_txt =ft.Text("",size = 11, color = MUTED, italic =True)
-        def encuesta_completa(respuestas: dict):
-            encuesta_card.visible = False
-            aplicar_valorslider(respuestas,"Encuesta") #conexion con el cuadro de encuesta 
-            encuesta_w = build_encuesta(page, encuesta_completa)
-            
-            encuesta_card = ft.Container(
-            content=encuesta_w,visible=True,
-            )
-            
+
+    slider_val_lbls = {k: lbl for k, lbl, _ in slider_widgets}
+
+    # ── IARRI del municipio seleccionado ──────────────────
+    muni_iarri_val  = calc_iarri(**{k: MUNICIPIOS[state["muni_idx"]][k] for k in ["AV","IC","ED","EAR","IM"]})
+    muni_niv, muni_col = nivel_riesgo(muni_iarri_val)
+    muni_iarri_txt  = ft.Text(f"{muni_iarri_val:.4f}", size=38, weight=ft.FontWeight.W_900, color=muni_col)
+    muni_nivel_txt  = ft.Text(f"● Riesgo {muni_niv}", size=13, weight=ft.FontWeight.BOLD, color=muni_col)
+    muni_prob_txt   = ft.Text(f"Prob. RI: {prob_ri(muni_iarri_val)*100:.1f}%", size=12, color=muni_col)
+    muni_nombre_txt = ft.Text(MUNICIPIOS[state["muni_idx"]]["nombre"], size=13, color=MUTED)
+
+    muni_iarri_card = ft.Container(
+        content=ft.Row([
+            ft.Column([
+                muni_nombre_txt,
+                muni_iarri_txt,
+            ], spacing=2),
+            ft.Column([
+                muni_nivel_txt,
+                muni_prob_txt,
+            ], horizontal_alignment=ft.CrossAxisAlignment.END, spacing=4),
+        ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+           vertical_alignment=ft.CrossAxisAlignment.CENTER),
+        bgcolor=CARD,
+        border=ft.border.all(1, BORDER),
+        border_radius=14,
+        padding=ft.padding.symmetric(horizontal=16, vertical=12),
+    )
+
+    preset_buttons_refs = []
+    preset_activo = [state.get("muni_idx", 0)]  # índice activo
+
     def set_preset(idx):
         m = MUNICIPIOS[idx]
         for v in VARIABLES:
@@ -750,40 +659,61 @@ def build_calculadora(page, state):
         for k, lbl, s in slider_widgets:
             lbl.value = f"{slider_vals[k]:.2f}"
             s.value   = slider_vals[k]
+        # Actualizar card IARRI del municipio
+        iv = calc_iarri(**{k: m[k] for k in ["AV","IC","ED","EAR","IM"]})
+        nv, cv = nivel_riesgo(iv)
+        muni_iarri_txt.value  = f"{iv:.4f}"
+        muni_iarri_txt.color  = cv
+        muni_nivel_txt.value  = f"● Riesgo {nv}"
+        muni_nivel_txt.color  = cv
+        muni_prob_txt.value   = f"Prob. RI: {prob_ri(iv)*100:.1f}%"
+        muni_prob_txt.color   = cv
+        muni_nombre_txt.value = m["nombre"]
+        # Resaltar botón activo
+        prev = preset_activo[0]
+        preset_activo[0] = idx
+        for j, btn in enumerate(preset_buttons_refs):
+            iv_j = calc_iarri(MUNICIPIOS[j]["AV"], MUNICIPIOS[j]["IC"],
+                               MUNICIPIOS[j]["ED"], MUNICIPIOS[j]["EAR"], MUNICIPIOS[j]["IM"])
+            _, col_j = nivel_riesgo(iv_j)
+            btn.style = ft.ButtonStyle(
+                bgcolor=ACCENT+"33" if j == idx else CARD,
+                color=TEXT,
+                side=ft.BorderSide(2 if j == idx else 1,
+                                   ACCENT if j == idx else col_j + "66"),
+            )
         actualizar_resultado()
 
-    # Crear botones presets
     preset_buttons = []
     for i, m in enumerate(MUNICIPIOS):
         def make_on_click(idx):
             return lambda e: set_preset(idx)
-        preset_buttons.append(
-            ft.FilledTonalButton(
-                m["nombre"].split()[0],
-                on_click=make_on_click(i),
-                style=ft.ButtonStyle(bgcolor=CARD, color=TEXT),
-            )
+        partes  = m["nombre"].split()
+        # Mostrar primeras 2 palabras (caben en el botón con scroll)
+        etiqueta = " ".join(partes[:2]) if len(partes) >= 2 else partes[0]
+        iarri_m  = calc_iarri(m["AV"], m["IC"], m["ED"], m["EAR"], m["IM"])
+        _, col_m = nivel_riesgo(iarri_m)
+        es_activo = (i == state.get("muni_idx", 0))
+        btn = ft.FilledTonalButton(
+            content=ft.Column([
+                ft.Text(etiqueta, size=11, weight=ft.FontWeight.W_600,
+                        color=TEXT, text_align=ft.TextAlign.CENTER),
+                ft.Text(f"IARRI {iarri_m:.2f}", size=10,
+                        color=col_m, text_align=ft.TextAlign.CENTER),
+            ], spacing=1, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+            on_click=make_on_click(i),
+            style=ft.ButtonStyle(
+                bgcolor=ACCENT+"33" if es_activo else CARD,
+                color=TEXT,
+                side=ft.BorderSide(2 if es_activo else 1,
+                                   ACCENT if es_activo else col_m + "66"),
+            ),
         )
-    preset_buttons.append(
-        ft.FilledTonalButton(
-            "Custom",
-            on_click=lambda e: None,
-            style=ft.ButtonStyle(bgcolor=CARD, color=TEXT),
-        )
-    )
+        preset_buttons.append(btn)
+        preset_buttons_refs.append(btn)
 
     presets_row = ft.Row(preset_buttons, spacing=8, scroll=ft.ScrollMode.AUTO)
-    
-    def togg_encuesta(e):
-        encuesta_card.visible = not encuesta_card.visible
-        toggle_btn_txt.value = (
-            "ocultar encuesta" if encuesta_card.visible
-            else "Llenar desde encuesta"
-        )
-        page.update()
-        
-        toggle_btn_txt = ft.Text("Ocultar Encuesta", size=13, weight=ft.FontWeight.BOLD, color= "#000000")
-    # Tarjetas slider
+
     slider_cards = []
     for v, (key, val_lbl, s) in zip(VARIABLES, slider_widgets):
         card = tarjeta(ft.Column([
@@ -809,12 +739,43 @@ def build_calculadora(page, state):
                 ft.Container(expand=True),
                 ft.Text("1.0", size=9, color=MUTED),
             ]),
-            ft.Text("protector ↓" if v["inv"] else "riesgo ↑",
+            ft.Text("" if v["inv"] else "",
                     size=9, color=v["color"], italic=True),
         ], spacing=2), padding=14)
         slider_cards.append(card)
 
-    # Resultado card
+    # ── Botón guardar en BD ────────────────────────────────
+    def guardar_en_bd(e):#automatizar
+        iarri = calc_iarri(**slider_vals)
+        niv, _ = nivel_riesgo(iarri)
+        pr = prob_ri(iarri)
+        muni = MUNICIPIOS[state["muni_idx"]]
+
+        def _save():
+            rid = guardar_calculo(
+                municipio_id=muni.get("id"),
+                AV=slider_vals["AV"], IC=slider_vals["IC"],
+                ED=slider_vals["ED"], EAR=slider_vals["EAR"],
+                IM=slider_vals["IM"],
+                iarri=iarri, nivel=niv, prob=pr,
+                mc_media=mc_resultados["media"],
+                mc_desv=mc_resultados["desv"],
+                mc_ci_lo=mc_resultados["ci_lo"],
+                mc_ci_hi=mc_resultados["ci_hi"],
+                origen="calculadora"
+            )
+            if rid:
+                guardar_msg.value = f"✓ Guardado en MySQL (ID: {rid})"
+                guardar_msg.color = ACCENT
+            else:
+                guardar_msg.value = "⚠ No se pudo guardar. Revisa la conexión."
+                guardar_msg.color = HIGH
+            page.update()
+
+        threading.Thread(target=_save, daemon=True).start()
+        guardar_msg.value = "Guardando..."
+        page.update()
+
     resultado_card = ft.Container(
         content=ft.Column([
             ft.Row([
@@ -832,6 +793,28 @@ def build_calculadora(page, state):
             ft.Divider(height=1, color=BORDER),
             ft.Text("Desglose de Contribuciones", size=11, color=MUTED),
             *desglose_rows,
+            ft.Divider(height=1, color=BORDER),
+            # Botón guardar
+            ft.ElevatedButton(
+                content=ft.Text("💾  Guardar en MySQL", size=13,
+                                 weight=ft.FontWeight.BOLD, color="#000000"),
+                bgcolor=LOW,
+                style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=12)),
+                height=46,
+                expand=True,
+                on_click=guardar_en_bd,
+            ),
+            guardar_msg,
+            ft.ElevatedButton(
+                content=ft.Text("🧠  Evaluar Estilo de Vida", size=13,
+                                 weight=ft.FontWeight.BOLD, color="#000000"),
+                bgcolor=ACCENT3,
+                style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=12)),
+                height=46,
+                expand=True,
+                on_click=evaluar_estilo_vida,
+            ),
+            estilo_msg,
             ft.Divider(height=1, color=BORDER),
             ft.ElevatedButton(
                 content=mc_btn_txt,
@@ -852,19 +835,16 @@ def build_calculadora(page, state):
         padding=18,
     )
 
-    # Monte Carlo
     mc_mean_txt = ft.Text("", size=12, color=ACCENT, font_family="monospace")
     mc_std_txt  = ft.Text("", size=12, color=ACCENT3, font_family="monospace")
     mc_ci_txt   = ft.Text("", size=12, color=MID, font_family="monospace")
-    mc_hist     = ft.Row([], spacing=2, height=80,
-                          vertical_alignment=ft.CrossAxisAlignment.END)
+    mc_hist     = ft.Row([], spacing=2, height=80, vertical_alignment=ft.CrossAxisAlignment.END)
 
     mc_card = ft.Container(
         content=ft.Column([
             ft.Text("📊 Monte Carlo — 1000 simulaciones", size=13,
                     weight=ft.FontWeight.BOLD, color=TEXT),
-            ft.Text("σ = ±0.12 perturbación aleatoria por variable",
-                    size=10, color=MUTED),
+            ft.Text("σ = ±0.12 perturbación aleatoria por variable", size=10, color=MUTED),
             mc_hist,
             ft.Row([ft.Text("0.0",size=9,color=MUTED), ft.Container(expand=True),
                     ft.Text("0.5",size=9,color=MUTED), ft.Container(expand=True),
@@ -882,7 +862,7 @@ def build_calculadora(page, state):
 
         def _task():
             res, media, desv, ci_lo, ci_hi = monte_carlo(slider_vals, 1000, 0.12)
-            # histograma 20 bins
+            mc_resultados.update({"media": media, "desv": desv, "ci_lo": ci_lo, "ci_hi": ci_hi})
             counts, _ = np.histogram(res, bins=20, range=(0,1))
             max_c = counts.max()
             mc_hist.controls = []
@@ -908,23 +888,112 @@ def build_calculadora(page, state):
 
     actualizar_resultado()
 
+    # ── Sección encuesta ───────────────────────────────────
+    nombre_field = ft.TextField(
+        label="Tu nombre (opcional)", hint_text="Anónimo",
+        bgcolor=CARD, border_color=BORDER, color=TEXT,
+        label_style=ft.TextStyle(color=MUTED), height=50,
+    )
+    edad_field = ft.TextField(
+        label="Edad", hint_text="Ej: 28",
+        bgcolor=CARD, border_color=BORDER, color=TEXT,
+        label_style=ft.TextStyle(color=MUTED), height=50,
+        keyboard_type=ft.KeyboardType.NUMBER, width=100,
+    )
+    cb_activo   = ft.Checkbox(label="Hago ejercicio regularmente", value=False, active_color=ACCENT)
+    cb_ultra    = ft.Checkbox(label="Consumo ultraprocesados frecuentemente", value=False, active_color=ACCENT2)
+    cb_verde    = ft.Checkbox(label="Tengo acceso a áreas verdes cerca", value=False, active_color=LOW)
+    cb_camina   = ft.Checkbox(label="Camino más de 20 min al día", value=False, active_color=ACCENT3)
+    min_field   = ft.TextField(
+        label="Min ejercicio/semana", hint_text="Ej: 150",
+        bgcolor=CARD, border_color=BORDER, color=TEXT,
+        label_style=ft.TextStyle(color=MUTED), height=50,
+        keyboard_type=ft.KeyboardType.NUMBER,
+    )
+    enc_msg = ft.Text("", size=11, color=ACCENT)
+
+    def guardar_encuesta_click(e):
+        muni = MUNICIPIOS[state["muni_idx"]]
+        iarri = calc_iarri(**slider_vals)
+        niv, _ = nivel_riesgo(iarri)
+        pr = prob_ri(iarri)
+
+        datos = {
+            "municipio_id":           muni.get("id"),
+            "nombre_usuario":         nombre_field.value or "Anónimo",
+            "edad":                   int(edad_field.value) if edad_field.value else None,
+            "genero":                 None,
+            "actividad_fisica":       int(cb_activo.value),
+            "min_ejercicio_sem":      int(min_field.value) if min_field.value else 0,
+            "consume_ultraprocesados":int(cb_ultra.value),
+            "acceso_areas_verdes":    int(cb_verde.value),
+            "camina_diario":          int(cb_camina.value),
+            "AV_enc":                 slider_vals["AV"],
+            "IC_enc":                 slider_vals["IC"],
+            "ED_enc":                 slider_vals["ED"],
+            "EAR_enc":                slider_vals["EAR"],
+            "IM_enc":                 slider_vals["IM"],
+            "iarri_resultado":        iarri,
+            "nivel_riesgo":           niv,
+            "prob_ri":                pr,
+        }
+
+        def _save():
+            eid = guardar_encuesta(datos)
+            if eid:
+                enc_msg.value = f"✓ Encuesta guardada (ID: {eid})"
+                enc_msg.color = ACCENT
+            else:
+                enc_msg.value = "⚠ Error al guardar. Revisa la conexión MySQL."
+                enc_msg.color = HIGH
+            page.update()
+
+        threading.Thread(target=_save, daemon=True).start()
+        enc_msg.value = "Guardando encuesta..."
+        page.update()
+
+    encuesta_card = tarjeta(ft.Column([
+        ft.Text("📋 Encuesta de Hábitos", size=13, weight=ft.FontWeight.BOLD, color=TEXT),
+        ft.Text("Tus respuestas se guardan en la BD y mejoran el modelo",
+                size=10, color=MUTED),
+        ft.Row([nombre_field, edad_field], spacing=8),
+        cb_activo, min_field, cb_ultra, cb_verde, cb_camina,
+        ft.ElevatedButton(
+            content=ft.Text("📤  Enviar Encuesta", size=13,
+                             weight=ft.FontWeight.BOLD, color="#000000"),
+            bgcolor=ACCENT3,
+            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=12)),
+            height=46, expand=True,
+            on_click=guardar_encuesta_click,
+        ),
+        enc_msg,
+    ], spacing=10))
+
     return ft.Column([
-        titulo_seccion("MUNICIPIO PRESET"),
+        titulo_seccion("SELECCION DE MUNICIPIO"),
         ft.Container(height=6),
         presets_row,
         ft.Container(height=8),
-        tarjeta(ft.Text(
-            "IARRI = 0.20(1−AV) + 0.25(1−IC) + 0.15(1−ED) + 0.25(EAR) + 0.15(IMP)",
-            size=10, color=ACCENT, font_family="monospace",
-        )),
+        titulo_seccion("IARRI DEL MUNICIPIO ESTIMADO"),
+        ft.Container(height=6),
+        muni_iarri_card,
+        ft.Container(height=8),
+        #tarjeta(ft.Text(
+            #"IARRI = 0.20(1−AV) + 0.25(1−IC) + 0.15(1−ED) + 0.25(EAR) + 0.15(IM)",
+            #size=10, color=ACCENT, font_family="monospace",
+        #)),
         ft.Container(height=10),
-        titulo_seccion("VARIABLES DEL MODELO"),
+        titulo_seccion("EVALUACION DE HABITOS DE RESISTENCIA"),
         ft.Container(height=6),
         *slider_cards,
         ft.Container(height=10),
         resultado_card,
         ft.Container(height=10),
         mc_card,
+        ft.Container(height=12),
+        titulo_seccion("ENCUESTA PERSONAL"),
+        ft.Container(height=6),
+        encuesta_card,
         ft.Container(height=20),
     ], spacing=8, scroll=ft.ScrollMode.AUTO)
 
@@ -933,20 +1002,35 @@ def build_calculadora(page, state):
 #  PANTALLA 4 — RECOMENDACIONES + GAMIFICACIÓN
 # ═══════════════════════════════════════════════════════════
 def build_recomendaciones(page, state):
+    # Calcular valores reales del municipio de mayor riesgo
+    muni_actual = MUNICIPIOS[state["muni_idx"]] if MUNICIPIOS else {}
+    iarri_antes  = calc_iarri(muni_actual.get("AV",0.3), muni_actual.get("IC",0.2),
+                               muni_actual.get("ED",0.1), muni_actual.get("EAR",0.8),
+                               muni_actual.get("IM",0.7))
+    # Simulación post-intervención: mejora AV, IC, ED
+    iarri_despues = calc_iarri(
+        min(1, muni_actual.get("AV",0.3) + 0.25),
+        min(1, muni_actual.get("IC",0.2) + 0.25),
+        min(1, muni_actual.get("ED",0.1) + 0.20),
+        muni_actual.get("EAR",0.8),
+        muni_actual.get("IM",0.7),
+    )
+    reduccion_pct = ((iarri_antes - iarri_despues) / iarri_antes * 100) if iarri_antes > 0 else 0
+    badges = state.get("badges", BADGES)
+    badges_ganadas = sum(1 for b in badges if b["earned"])
 
-    # KPIs
     kpis = ft.Row([
         ft.Container(
             content=ft.Column([
-                ft.Text("18.2%", size=22, weight=ft.FontWeight.W_900, color=ACCENT),
+                ft.Text(f"{reduccion_pct:.1f}%", size=22, weight=ft.FontWeight.W_900, color=ACCENT),
                 ft.Text("Reducción", size=10, color=MUTED, text_align=ft.TextAlign.CENTER),
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=2),
             bgcolor=CARD, border=ft.border.all(1,BORDER), border_radius=14,
             padding=12, expand=True,
         ),
         ft.Container(
-            content=ft.Column([
-                ft.Text("0.78→0.64", size=16, weight=ft.FontWeight.W_900, color=MID),
+            content=ft.Column([#ARRIBA
+                ft.Text(f"{iarri_antes:.2f}→{iarri_despues:.2f}", size=16, weight=ft.FontWeight.W_900, color=MID),
                 ft.Text("IARRI post-interv.", size=10, color=MUTED, text_align=ft.TextAlign.CENTER),
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=2),
             bgcolor=CARD, border=ft.border.all(1,BORDER), border_radius=14,
@@ -954,7 +1038,7 @@ def build_recomendaciones(page, state):
         ),
         ft.Container(
             content=ft.Column([
-                ft.Text("3", size=22, weight=ft.FontWeight.W_900, color=ACCENT3),
+                ft.Text(str(badges_ganadas), size=22, weight=ft.FontWeight.W_900, color=ACCENT3),
                 ft.Text("Insignias", size=10, color=MUTED, text_align=ft.TextAlign.CENTER),
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=2),
             bgcolor=CARD, border=ft.border.all(1,BORDER), border_radius=14,
@@ -962,18 +1046,15 @@ def build_recomendaciones(page, state):
         ),
     ], spacing=8)
 
-    # Recomendaciones expandibles
     rec_cards = []
     for r in RECOMENDACIONES:
-        expanded = ft.Ref[bool]()
         body = ft.Container(
             content=ft.Column([
                 ft.Text(r["desc"], size=12, color=MUTED),
                 ft.Container(
                     content=ft.Text(r["impacto"], size=11, color=r["color"],
                                     weight=ft.FontWeight.BOLD),
-                    bgcolor=r["color"]+"11",
-                    border=ft.border.all(1, r["color"]+"33"),
+                    bgcolor=r["color"]+"11", border=ft.border.all(1, r["color"]+"33"),
                     border_radius=8, padding=8,
                 ),
             ], spacing=6),
@@ -1012,10 +1093,21 @@ def build_recomendaciones(page, state):
             )
         )
 
-    # Simulación Cuautlancingo
-    antes   = {"AV":0.30,"IC":0.20,"ED":0.10,"EAR":0.80,"IMP":0.70}
-    despues = {"AV":0.55,"IC":0.45,"ED":0.30,"EAR":0.80,"IMP":0.70}
-    cambios = [("AV","0.30→0.55",LOW),("IC","0.20→0.45",ACCENT),("ED","0.10→0.30",ACCENT3)]
+    nombre_sim = muni_actual.get("nombre", "Municipio")
+    av_a  = muni_actual.get("AV", 0.30)
+    ic_a  = muni_actual.get("IC", 0.20)
+    ed_a  = muni_actual.get("ED", 0.10)
+    av_d  = min(1.0, av_a + 0.25)
+    ic_d  = min(1.0, ic_a + 0.25)
+    ed_d  = min(1.0, ed_a + 0.20)
+    cambios = [
+        ("AV", f"{av_a:.2f}→{av_d:.2f}", LOW),
+        ("IC", f"{ic_a:.2f}→{ic_d:.2f}", ACCENT),
+        ("ED", f"{ed_a:.2f}→{ed_d:.2f}", ACCENT3),
+    ]
+    niv_antes,  col_antes  = nivel_riesgo(iarri_antes)
+    niv_despues, col_despues = nivel_riesgo(iarri_despues)
+
     sim_rows = [
         ft.Row([
             ft.Text(k, size=12, width=32, color=MUTED, weight=ft.FontWeight.BOLD,
@@ -1032,24 +1124,24 @@ def build_recomendaciones(page, state):
     ]
 
     sim_card = tarjeta(ft.Column([
-        ft.Text("Simulación: Cuautlancingo", size=13, weight=ft.FontWeight.BOLD, color=TEXT),
+        ft.Text(f"Simulación: {nombre_sim}", size=13, weight=ft.FontWeight.BOLD, color=TEXT),
         *sim_rows,
         ft.Divider(height=1, color=BORDER),
         ft.Row([
             ft.Column([
                 ft.Text("Antes", size=10, color=MUTED),
-                ft.Text("0.78", size=28, weight=ft.FontWeight.W_900, color=HIGH),
-                ft.Text("Alto", size=11, color=HIGH),
+                ft.Text(f"{iarri_antes:.2f}", size=28, weight=ft.FontWeight.W_900, color=col_antes),
+                ft.Text(niv_antes, size=11, color=col_antes),
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
             ft.Text("→", size=24, color=ACCENT),
             ft.Column([
                 ft.Text("Después", size=10, color=MUTED),
-                ft.Text("0.64", size=28, weight=ft.FontWeight.W_900, color=MID),
-                ft.Text("Medio", size=11, color=MID),
+                ft.Text(f"{iarri_despues:.2f}", size=28, weight=ft.FontWeight.W_900, color=col_despues),
+                ft.Text(niv_despues, size=11, color=col_despues),
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
             ft.Column([
                 ft.Text("Reducción", size=10, color=MUTED),
-                ft.Text("−18.2%", size=22, weight=ft.FontWeight.W_900, color=ACCENT),
+                ft.Text(f"−{reduccion_pct:.1f}%", size=28, weight=ft.FontWeight.W_900, color=ACCENT),
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
         ], alignment=ft.MainAxisAlignment.SPACE_AROUND),
         ft.Container(
@@ -1060,9 +1152,8 @@ def build_recomendaciones(page, state):
         ),
     ], spacing=10))
 
-    # Badges
     badge_items = []
-    for b in BADGES:
+    for b in badges:
         badge_items.append(
             ft.Container(
                 content=ft.Column([
@@ -1075,8 +1166,7 @@ def build_recomendaciones(page, state):
                 ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=4),
                 bgcolor=CARD if not b["earned"] else ACCENT3+"11",
                 border=ft.border.all(1, ACCENT3 if b["earned"] else BORDER),
-                border_radius=14, padding=12,
-                expand=True,
+                border_radius=14, padding=12, expand=True,
             )
         )
 
@@ -1085,7 +1175,6 @@ def build_recomendaciones(page, state):
         ft.Row(badge_items[3:], spacing=8),
     ], spacing=8)
 
-    # Metodología
     fases = [
         ("Fase 1", "Integración de datos (INEGI, CONAPO, DENUE)"),
         ("Fase 2", "Modelado matemático IARRI-MX"),
@@ -1104,6 +1193,7 @@ def build_recomendaciones(page, state):
         ], spacing=10)
         for f, d in fases
     ]
+
     ods_row = ft.Row([
         ft.Container(
             content=ft.Text("🎯 ODS 3 — Salud y Bienestar", size=11, color=ACCENT3),
@@ -1147,7 +1237,7 @@ def build_recomendaciones(page, state):
 #  APP PRINCIPAL
 # ═══════════════════════════════════════════════════════════
 def main(page: ft.Page):
-    page.title       = "ARQ:-Metabólica MX"
+    page.title       = "ARQ-Metabólica MX"
     page.bgcolor     = BG
     page.padding     = 0
     page.theme_mode  = ft.ThemeMode.DARK
@@ -1155,11 +1245,17 @@ def main(page: ft.Page):
     page.window.width  = 400
     page.window.height = 800
 
-    # Estado compartido
-    state = {"muni_idx": 0, "tab": 0, "refresh": None}
-    state["refresh"] = None
-    #municipio y estado de visualizancion de pestaña
-    # Área de contenido
+    # ── Inicializar BD y cargar datos ─────────────────────
+    init_db()
+    cargar_municipios_bd()
+
+    state = {
+        "muni_idx": 0,
+        "tab": 0,
+        "refresh": None,
+        "badges": [dict(b) for b in BADGES],
+    }
+
     content_area = ft.Container(
         expand=True,
         padding=ft.padding.symmetric(horizontal=16, vertical=8),
@@ -1167,30 +1263,23 @@ def main(page: ft.Page):
 
     nav_labels = ["Inicio","Mapa","Calcular","Intervención"]
     nav_icons  = ["🏠","🗺️","🧮","🛡️"]
-
     nav_items  = []
 
     def build_screen(idx):
         builders = [build_inicio, build_mapa, build_calculadora, build_recomendaciones]
-        return builders[idx](page, state) #erors  por mapa :v(resuelto)
+        return builders[idx](page, state)
 
     def switch_tab(idx):
         state["tab"] = idx
         nav_items.clear()
-        
         for i in range(4):
             nav_items.append(make_nav(i, active=(i == idx)))
         nav_bar.content = ft.Row(nav_items, expand=True,
-                                 alignment=ft.MainAxisAlignment.SPACE_AROUND) #errors
+                                  alignment=ft.MainAxisAlignment.SPACE_AROUND)
         content_area.content = build_screen(idx)
         page.update()
 
-    def make_nav(idx,active=False):
-        #indicator = ft.Container(
-            #height=3, width=32, bgcolor=ACCENT,
-            #border_radius=2,
-            #visible=(idx == 0),
-        #)
+    def make_nav(idx, active=False):
         return ft.GestureDetector(
             content=ft.Column([
                 ft.Text(nav_icons[idx], size=22,
@@ -1206,20 +1295,18 @@ def main(page: ft.Page):
             expand=True,
         )
 
-    # Función para refrescar pantalla inicio al cambiar municipio
     def refresh():
         if state.get("tab") == 0:
             content_area.content = build_screen(0)
             page.update()
-            #estaa funcion me permite refrescar los botones de los municipios
     state["refresh"] = refresh
 
     for i in range(4):
         nav_items.append(make_nav(i))
 
-    nav_bar = ft.Container( #configuracion de barra de auxiliar de menu de opciones
+    nav_bar = ft.Container(
         content=ft.Row(nav_items, expand=True,
-                        alignment=ft.MainAxisAlignment .SPACE_AROUND),
+                        alignment=ft.MainAxisAlignment.SPACE_AROUND),
         bgcolor=SURFACE,
         border=ft.border.only(top=ft.BorderSide(1, BORDER)),
         padding=ft.padding.symmetric(vertical=10),
@@ -1229,12 +1316,11 @@ def main(page: ft.Page):
     top_bar = ft.Container(
         content=ft.Row([
             ft.Column([
-                ft.Text("ARQ-Metabólica MX", size=18, weight=ft.FontWeight.W_900,
-                        color=ACCENT),
+                ft.Text("ARQ-Metabólica MX", size=18, weight=ft.FontWeight.W_900, color=ACCENT),
                 ft.Text("IARRI-MX  ·  Puebla, México", size=11, color=MUTED),
             ], spacing=0),
             ft.Container(
-                content=ft.Text("v1.0", size=11, color=ACCENT, weight=ft.FontWeight.BOLD),
+                content=ft.Text("v2.0 DB", size=11, color=ACCENT, weight=ft.FontWeight.BOLD),
                 bgcolor=ACCENT+"22", border=ft.border.all(1,ACCENT+"44"),
                 border_radius=8, padding=ft.padding.symmetric(horizontal=10, vertical=4),
             ),
@@ -1244,7 +1330,6 @@ def main(page: ft.Page):
         padding=ft.padding.symmetric(horizontal=16, vertical=10),
     )
 
-    # Pantalla inicial
     content_area.content = build_screen(0)
 
     page.add(
