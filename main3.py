@@ -1155,7 +1155,7 @@ def build_recomendaciones(page, state):
         ft.Text(f"Simulación: {nombre_sim}", size=13, weight=ft.FontWeight.BOLD, color=TEXT),
         *sim_rows,
         ft.Divider(height=1, color=BORDER),
-        ft.Row([
+        ft.Row([ 
             ft.Column([
                 ft.Text("Antes", size=10, color=MUTED),
                 ft.Text(f"{iarri_antes:.2f}", size=28, weight=ft.FontWeight.W_900, color=col_antes),
