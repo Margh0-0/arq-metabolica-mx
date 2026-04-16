@@ -16,7 +16,7 @@ def cerrar_sesion():
 
 def pantalla_login(page: ft.Page, on_login_exitoso):
     email_field = ft.TextField(label="Correo electronico", width=320)
-    password_field = ft.TextField(label="Contrasena", password=True, can_reveal_password=True, width=320)
+    password_field = ft.TextField(label="Contraseña", password=True, can_reveal_password=True, width=320)
     error_text = ft.Text("", color=ft.Colors.RED_400, size=13)
 
     def hacer_login(e):
@@ -31,7 +31,7 @@ def pantalla_login(page: ft.Page, on_login_exitoso):
             })
             on_login_exitoso(respuesta.user)
         except Exception as ex:
-            error_text.value = "Correo o contrasena incorrectos"
+            error_text.value = "Correo o contraseña incorrectos"
             page.update()
 
     def ir_a_registro(e):
