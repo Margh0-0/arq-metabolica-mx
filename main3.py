@@ -15,7 +15,7 @@ import threading
 
 # ── Importar módulo de base de datos ──────────────────────
 from database import (
-    init_db,
+    init_db, #base
     get_municipios,
     get_estadisticas_municipio,
     guardar_calculo,
@@ -43,7 +43,7 @@ WHITE    = "#ffffff"
 #  MODELO MATEMÁTICO IARRI-MX
 # ═══════════════════════════════════════════════════════════
 WEIGHTS = {"AV": 0.20, "IC": 0.25, "ED": 0.15, "EAR": 0.25, "IM": 0.15}
-
+#indice de IARRI (indice arquitectonico de insulina)
 # MUNICIPIOS se carga desde la BD en tiempo de ejecución
 MUNICIPIOS = []
 
@@ -78,10 +78,14 @@ BADGES = [
 # ═══════════════════════════════════════════════════════════
 def calc_iarri(AV, IC, ED, EAR, IM):
     return (WEIGHTS["AV"]*(1-AV) + WEIGHTS["IC"]*(1-IC) +
-            WEIGHTS["ED"]*(1-ED) + WEIGHTS["EAR"]*EAR + WEIGHTS["IM"]*IM)
-
+            WEIGHTS["ED"]*(1-ED) + WEIGHTS["EAR"]*EAR + WEIGHTS["IM"]*(1-IM))
+#AV = Areas verdes 
+#IC = Indice de caminos-trayectos
+#ED = Entrenamiento deportivo 
+#EAR= Entorno alimentario
+#IM = Indice de marginacion 
 def nivel_riesgo(v):
-    if v <= 0.33: return "Bajo",  LOW
+    if v <= 0.33 -1: return "Bajo",  LOW
     if v <= 0.66: return "Medio", MID
     return               "Alto",  HIGH
 
@@ -109,10 +113,11 @@ def cargar_municipios_bd():
         print(f"[DB] {len(MUNICIPIOS)} municipios cargados desde MySQL ✓")
     else:
         # Fallback a datos hardcoded si no hay conexión
-        MUNICIPIOS = [
+        MUNICIPIOS = [#cambios
             {"id": None, "nombre": "San Andrés Cholula",      "AV": 0.80, "IC": 0.60, "ED": 0.40, "EAR": 0.45, "IM": 0.10},
-            {"id": None, "nombre": "San Pablo Xochimehuacan", "AV": 0.50, "IC": 0.35, "ED": 0.20, "EAR": 0.60, "IM": 0.55},
+            {"id": None, "nombre": "Tehuacan", "AV": 0.50, "IC": 0.35, "ED": 0.20, "EAR": 0.60, "IM": 0.55},
             {"id": None, "nombre": "Cuautlancingo",           "AV": 0.30, "IC": 0.20, "ED": 0.10, "EAR": 0.80, "IM": 0.70},
+            {"id": None, "nombre": "San Andres Cholula",      "AV": 0.30, "IC": 0.20, "ED": 0.10, "EAR": 0.80, "IM": 0.70},
         ]
         print("[DB] ⚠ Sin conexión MySQL, usando datos locales")
 
@@ -233,7 +238,7 @@ def build_inicio(page, state):
             ], alignment=ft.MainAxisAlignment.START, vertical_alignment=ft.CrossAxisAlignment.END),
             semaforo,
             ft.Row([
-                ft.Text("Prob. Resistencia a la Insulina:", size=12, color=MUTED),
+                ft.Text("Probabilidad de Resistencia a la Insulina:", size=12, color=MUTED),
                 ft.Text(f"{prob_ri(iarri)*100:.1f}%", size=14,
                         weight=ft.FontWeight.BOLD, color=col),
             ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
@@ -283,14 +288,37 @@ def build_inicio(page, state):
     grid_row1 = ft.Row([var_cards[0], var_cards[1]], spacing=10, expand=True)
     grid_row2 = ft.Row([var_cards[2], var_cards[3]], spacing=10, expand=True)
     grid_row3 = ft.Row([var_cards[4]], spacing=10, expand=True)
-
+    
+    def calcula_derivadas(muni):
+        AV = muni["AV"]
+        IC = muni["IC"]
+        ED = muni["ED"]
+        EAR = muni["EAR"]
+        IM  = muni["IM"]    
+        
+        total = AV + IC + ED + EAR + IM
+        
+        return {
+            "IC": IC / total,
+            "EAR": EAR / total,
+            "AV": AV / total,
+            "ED": ED / total,
+            "IM": IM / total, 
+        }
+        
+    derivadas = calcula_derivadas(muni) #recuerda que muni es el arreglo para municipios
     sens_items = [
-        ("IC",  0.25, ACCENT,  "Mayor impacto (protector)"),
-        ("EAR", 0.25, ACCENT2, "Mayor impacto (riesgo)"),
-        ("AV",  0.20, LOW,     "Impacto medio"),
-        ("ED",  0.15, ACCENT3, "Impacto moderado"),
-        ("IM",  0.15, MID,     "Impacto moderado"),
+            
+        ("IC",  derivadas["IC"], ACCENT,  "Mayor impacto de movilidad continua"),
+        ("EAR", derivadas["EAR"], ACCENT2,"Mayor impacto (riesgo)"),
+        ("AV",  derivadas["AV"], LOW,     "Impacto medio"),
+        ("ED",  derivadas["ED"], ACCENT3, "Impacto moderado"),  
+        ("IM",  derivadas["IM"], MID,     "Impacto moderado"),
     ]
+          
+          
+    
+
     sens_rows = []
     for k, val, c, hint in sens_items:
         sens_rows.append(
@@ -309,14 +337,14 @@ def build_inicio(page, state):
         )
 
     sens_card = tarjeta(ft.Column([
-        ft.Text("∂IARRI — Derivadas Parciales", size=13, weight=ft.FontWeight.BOLD, color=TEXT),
-        ft.Text("Mayor impacto: Caminabilidad (IC) y Entorno Alimentario (EAR)", size=10, color=MUTED),
+        ft.Text("∂IARRI — Totales Estadisticos", size=13, weight=ft.FontWeight.BOLD, color=TEXT),
+        ft.Text("Mayor impacto: Caminabilidad (movimientos) y Entorno Alimentario ", size=10, color=MUTED),
         *sens_rows,
     ], spacing=8))
 
     formula_card = tarjeta(ft.Column([
-        ft.Text("Fórmula del Modelo", size=11, color=MUTED),
-        ft.Text("IARRI = 0.20(1−AV) + 0.25(1−IC)\n       + 0.15(1−ED) + 0.25(EAR) + 0.15(IM)",
+        ft.Text("Fórmula del Modelo", size=3, color=MUTED), 
+        ft.Text("IARRI = Areas Verdes + Indice de camino\n+ Entrenamiento(fisico) + Entorno alimentario + Indice de Marginacion",
                 size=11, color=ACCENT, font_family="monospace"),
         ft.Row([
             ft.Container(content=ft.Text("  0.00–0.33  Bajo  ", size=10, color=LOW),
