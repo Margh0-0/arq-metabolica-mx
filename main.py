@@ -12,7 +12,8 @@ import flet as ft
 import numpy as np
 import threading
 import math
-
+import flet as ft
+from auth import pantalla_login, pantalla_registro, obtener_usuario_actual  # ← agrega esta línea
 # ═══════════════════════════════════════════════════════════
 #  PALETA DE COLORES
 # ═══════════════════════════════════════════════════════════
@@ -183,8 +184,8 @@ def build_encuesta(page, on_complete): #cambio bb
                     ft.Container(
                         content=ft.Text(v["icon"], size= 16),
                         bgcolor=v["color"] + "22",
-                        border_radius=8,
-                        width=34, height=34,
+                       border_radius=8 ,
+                        width=34, height=34 ,
                         alignment=fr.alignment.Alignment(0, 0),
                     ),
                     ft.Text(op["texto"],size=13, color= TEXT, expand=True),
@@ -1152,8 +1153,10 @@ def main(page: ft.Page):
     page.padding     = 0
     page.theme_mode  = ft.ThemeMode.DARK
     page.fonts       = {}
-    page.window.width  = 400
-    page.window.height = 800
+    page.window.width    = 390      # ← cambia de 400
+    page.window.height   = 844      # ← cambia de 800
+    page.window.resizable = False   # ← agrega esta línea
+    page.window.center()            # ← agrega esta línea
 
     # Estado compartido
     state = {"muni_idx": 0, "tab": 0, "refresh": None}
@@ -1256,5 +1259,37 @@ def main(page: ft.Page):
     )
 
 
+def main_con_auth(page: ft.Page):
+    page.window.width     = 390
+    page.window.height    = 844
+    page.window.resizable = False
+    page.window.center()
+
+    def on_login_exitoso(usuario):
+        page.views.clear()
+        main(page)
+        page.update()
+
+    def on_route_change(e):
+        page.views.clear()
+        usuario = obtener_usuario_actual()
+        if not usuario:
+            if page.route == "/registro":
+                page.views.append(pantalla_registro(page, on_login_exitoso))
+            else:
+                page.views.append(pantalla_login(page, on_login_exitoso))
+        else:
+            main(page)
+        page.update()
+
+    page.on_route_change = on_route_change
+    usuario = obtener_usuario_actual()
+    if not usuario:
+        page.views.append(pantalla_login(page, on_login_exitoso))
+    else:
+        main(page)
+    page.update()
+
+
 if __name__ == "__main__":
-    ft.app(target=main)
+    ft.app(target=main_con_auth)
