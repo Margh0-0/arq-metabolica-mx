@@ -31,207 +31,14 @@ MUTED    = "#64748b"      # Texto secundario gris medio
 WHITE    = "#ffffff"
 
 # ═══════════════════════════════════════════════════════════
-#  MODELO MATEMÁTICO IARRI-MX
+#  CORE — Lógica científica y datos (extraídos a módulos)
+#  F2 del refactor arquitectural — 2026-04-23
 # ═══════════════════════════════════════════════════════════
-WEIGHTS = {"AV": 0.20, "IC": 0.25, "ED": 0.15, "EAR": 0.25, "IMP": 0.15}  # α+β+γ+δ+ε = 1.00  (PDF pág. 23)
-#COLUMNAS DE CUADRO DEBAJO DE LOS COLORES VERDE,AMARILLO Y ROJP
-MUNICIPIOS = [
-    {"nombre": "San Andrés Cholula",      "AV": 0.80, "IC": 0.60, "ED": 0.40, "EAR": 0.45, "IMP": 0.10},
-    {"nombre": "San Pablo Xochimehuacan", "AV": 0.50, "IC": 0.35, "ED": 0.20, "EAR": 0.60, "IMP": 0.55},
-    {"nombre": "Cuautlancingo",           "AV": 0.30, "IC": 0.20, "ED": 0.10, "EAR": 0.80, "IMP": 0.70},
-]
-# ═══════════════════════════════════════════════════════════
-#  DATOS TERRITORIALES INEGI — Módulo 2
-#  Fuente: INEGI Censos 2020, DENUE, CONAPO (valores reales aproximados)
-# ═══════════════════════════════════════════════════════════
-
-# ── Carga datos INEGI desde CSV si existe, si no usa respaldo ──
-import os as _os
-import csv as _csv
-
-def _cargar_datos_csv():
-    """Lee datos_inegi_puebla.csv si existe. Retorna dict por nombre de municipio."""
-    ruta = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "datos_inegi_puebla.csv")
-    if not _os.path.exists(ruta):
-        return None
-    try:
-        resultado = {}
-        with open(ruta, encoding="utf-8-sig") as f:
-            reader = _csv.DictReader(f)
-            for row in reader:
-                nombre = row.get("nombre", "").strip()
-                if nombre:
-                    resultado[nombre] = {
-                        "poblacion":        int(float(row.get("poblacion_2020", 0) or 0)),
-                        "densidad_pob":     int(float(row.get("densidad_hab_km2", 0) or 0)),
-                        "areas_verdes_m2":  float(row.get("areas_verdes_m2_hab", 0) or 0),
-                        "marginacion":      float(row.get("indice_marginacion", 0) or 0),
-                        "grado_marginacion":row.get("grado_marginacion", "—"),
-                        "equipamiento_dep": float(row.get("equipamiento_dep_10k", 0) or 0),
-                        "movilidad_peat":   float(row.get("movilidad_peatonal", 0) or 0),
-                        "tiendas_ultra":    float(row.get("EAR", 0) or 0),
-                        "fuente":           row.get("fuente", "CSV local"),
-                    }
-        print(f"[INEGI] CSV cargado: {len(resultado)} municipios")
-        return resultado
-    except Exception as ex:
-        print(f"[INEGI] Error leyendo CSV: {ex}")
-        return None
-
-_csv_datos = _cargar_datos_csv()
-
-DATOS_TERRITORIALES = {
-    "San Andrés Cholula": {
-        # Densidad poblacional (hab/km²)
-        "densidad_pob":     4800,
-        "densidad_max":     12000,
-        # Áreas verdes (m² por habitante)
-        "areas_verdes_m2":  6.2,
-        "oms_standard":     9.0,
-        # Índice de marginación CONAPO (0=bajo, 1=muy alto)
-        "marginacion":      0.10,
-        # Equipamiento deportivo (instalaciones por 10k hab)
-        "equipamiento_dep": 3.8,
-        "equip_ideal":      6.0,
-        # Movilidad peatonal — % banquetas en buen estado
-        "movilidad_peat":   0.62,
-        # Comercios ultraprocesados / comercios totales (DENUE)
-        "tiendas_ultra":    0.41,
-        # Población total (Censo 2020)
-        "poblacion":        115_613,
-        # Colonias principales
-        "colonias": [
-            {"nombre": "San Andrés Cholula Centro", "iarri": 0.28, "av": 0.85, "ic": 0.70},
-            {"nombre": "Ex-Hacienda Zavaleta",      "iarri": 0.34, "av": 0.65, "ic": 0.60},
-            {"nombre": "La Carcaña",                "iarri": 0.42, "av": 0.50, "ic": 0.45},
-            {"nombre": "San Bernardino Tlaxcalancingo", "iarri": 0.38, "av": 0.60, "ic": 0.55},
-        ],
-    },
-    "San Pablo Xochimehuacan": {
-        "densidad_pob":     8200,
-        "densidad_max":     12000,
-        "areas_verdes_m2":  2.8,
-        "oms_standard":     9.0,
-        "marginacion":      0.55,
-        "equipamiento_dep": 1.9,
-        "equip_ideal":      6.0,
-        "movilidad_peat":   0.35,
-        "tiendas_ultra":    0.62,
-        "poblacion":        52_408,
-        "colonias": [
-            {"nombre": "Xochimehuacan Norte", "iarri": 0.58, "av": 0.30, "ic": 0.35},
-            {"nombre": "Xochimehuacan Sur",   "iarri": 0.64, "av": 0.25, "ic": 0.30},
-            {"nombre": "El Barrio Nuevo",     "iarri": 0.55, "av": 0.35, "ic": 0.38},
-        ],
-    },
-    "Cuautlancingo": {
-        "densidad_pob":     11400,
-        "densidad_max":     12000,
-        "areas_verdes_m2":  1.1,
-        "oms_standard":     9.0,
-        "marginacion":      0.70,
-        "equipamiento_dep": 0.8,
-        "equip_ideal":      6.0,
-        "movilidad_peat":   0.22,
-        "tiendas_ultra":    0.78,
-        "poblacion":        103_994,
-        "colonias": [
-            {"nombre": "Cuautlancingo Centro", "iarri": 0.76, "av": 0.15, "ic": 0.22},
-            {"nombre": "Lomas de Cuautlancingo","iarri": 0.71, "av": 0.20, "ic": 0.25},
-            {"nombre": "San Pedro Zacachimalpa","iarri": 0.80, "av": 0.10, "ic": 0.18},
-            {"nombre": "Parques Industriales",  "iarri": 0.74, "av": 0.18, "ic": 0.20},
-        ],
-    },
-}
-
-
-
-ENCUESTA = [
-    {
-        "variable": "AV",  # acceso a areas verdes
-        "pregunta": "¿Como consideras tu estilo de vida?",
-        "opciones": [
-          {"texto": "Activo con servicios completos y lugares tranquilos para caminar.", "valor": 0.8},
-          {"texto": "Inactivo con servicios y problemas de salud(actualmente) sin poder salir a un lugar a caminar.", "valor": 0.2},
-          {"texto": "Prefiero no responder la pregunta", "valor": 0.5},
-        ],
-    },
-    {
-        "variable": "IC",  # indice de caminabilidad
-        "pregunta": "¿Cuantas horas pasas al dia sentado?",
-        "opciones": [
-             {"texto": "Menos de dos horas al dia", "valor": 0.8},
-             {"texto": "Mas de seis horas al dia", "valor": 0.2},
-             {"texto": "Menos de una hora o quince minutos al dia", "valor": 0.9},
-        ],
-    },
-    {
-        "variable": "ED",  # entrenamiento deportivo
-        "pregunta": "¿Practica algun deporte, y soporta los sintomas del ritmo cardiaco elevado  que le produce?",
-        "opciones": [
-          {"texto": "Si entreno de forma constante.", "valor": 0.85},
-          {"texto": "No practico ningun deporte.", "valor": 0.1},
-          {"texto": "Puedo hacerlo media hora y ya.", "valor": 0.4},
-        ],
-    },
-    {
-        "variable": "EAR",  # entorno alimentario riesgoso
-        "pregunta": "Con que frecuencia consume azucar como productos empaquetados.",
-        "opciones": [
-          {"texto": "Lo hago al menos una vez a la semana.", "valor": 0.7},
-          {"texto": "No consumo ese tipo de alimentos.", "valor": 0.1},
-        ],
-    },
-]
-
-VARIABLES = [
-    {"key": "AV",  "label": "Áreas Verdes",                "icon": "🌳", "color": LOW,    "inv": True,  "desc": "Estándar OMS 9 m²/hab"},
-    {"key": "IC",  "label": "Índice Caminabilidad",         "icon": "🚶", "color": ACCENT, "inv": True,  "desc": "Intersecciones + banquetas"},
-    {"key": "ED",  "label": "Equipamiento Deportivo",       "icon": "⚽", "color": ACCENT3,"inv": True,  "desc": "Equipamientos / población"},
-    {"key": "EAR", "label": "Entorno Alimentario Riesgoso(LUGARES)", "icon": "🍟", "color": ACCENT2,"inv": False, "desc": "Tiendas ultraprocesados / total"},
-    {"key": "IMP",  "label": "Índice de Marginación",        "icon": "📉", "color": MID,    "inv": False, "desc": "CONAPO normalizado"},
-]
-
-RECOMENDACIONES = [
-    {"icon": "🌳", "color": LOW,    "titulo": "Incrementar Áreas Verdes",    "desc": "Corredores verdes y microparques. AV: 0.30 → 0.55", "impacto": "↓ IARRI −0.05 (−6.4%)"},
-    {"icon": "🚶", "color": ACCENT, "titulo": "Ruta Diaria de 15 min",       "desc": "Banquetas accesibles e iluminación. IC: 0.20 → 0.45", "impacto": "↓ IARRI −0.0625 (−8%)"},
-    {"icon": "⚽", "color": ACCENT3,"titulo": "Espacios Deportivos",          "desc": "2 unidades barriales abiertas. ED: 0.10 → 0.30", "impacto": "↓ IARRI −0.03 (−3.8%)"},
-    {"icon": "🏗️", "color": ACCENT2,"titulo": "Regulación Alimentaria",      "desc": "Reducir ultraprocesados. EAR: 0.80 → 0.60", "impacto": "↓ IARRI −0.05 (−6.4%)"},
-    {"icon": "🪟", "color": MID,    "titulo": "Diseño Arquitectónico",        "desc": "Ventilación cruzada y acceso escaleras", "impacto": "Compensación: +18%"},
-]
-
-BADGES = [
-    {"emoji": "🏛️", "nombre": "Arquitecto Preventivo", "earned": True},
-    {"emoji": "🌱", "nombre": "Diseñador Bioactivo",    "earned": True},
-    {"emoji": "⚡", "nombre": "Agente Metabólico",      "earned": False},
-    {"emoji": "📊", "nombre": "Analista Territorial",   "earned": False},
-    {"emoji": "🗺️", "nombre": "Mapeador Urbano",        "earned": True},
-    {"emoji": "🔬", "nombre": "Investigador IARRI",     "earned": False},
-]
-
-def calc_iarri(AV, IC, ED, EAR, IMP): #AV =iNDICE DE AREAS VERDES
-    return (WEIGHTS["AV"]  * (1 - AV) +
-            WEIGHTS["IC"]  * (1 - IC) +
-            WEIGHTS["ED"]  * (1 - ED) +
-            WEIGHTS["EAR"] * EAR +
-            WEIGHTS["IMP"] * IMP)
-
-def nivel_riesgo(v):
-    if v <= 0.33: return "Bajo",  LOW
-    if v <= 0.66: return "Medio", MID
-    return               "Alto",  HIGH
-
-def prob_ri(v):
-    return min(1.0, 0.10 + 0.50 * v)
-
-def monte_carlo(base, n=1000, sigma=0.12):
-    res = []
-    for _ in range(n):
-        v = {k: max(0, min(1, base[k] + np.random.uniform(-sigma, sigma)))
-             for k in ["AV","IC","ED","EAR","IMP"]}
-        res.append(calc_iarri(**v))
-    arr = np.array(res)
-    return arr, arr.mean(), arr.std(), np.percentile(arr,2.5), np.percentile(arr,97.5)
+from core.iarri import calc_iarri, nivel_riesgo, prob_ri, monte_carlo, WEIGHTS
+from core.datos import (
+    MUNICIPIOS, DATOS_TERRITORIALES, ENCUESTA, VARIABLES,
+    RECOMENDACIONES, BADGES, LECCIONES, _csv_datos,
+)
 
 
 # ═══════════════════════════════════════════════════════════
@@ -2275,9 +2082,12 @@ def build_test(page, state):
 
 # ═══════════════════════════════════════════════════════════
 #  MÓDULO EDUCATIVO — LECCIONES + QUIZ
+#  LECCIONES se importa desde core/datos.py (F2 del refactor — 2026-04-23)
 # ═══════════════════════════════════════════════════════════
 
-LECCIONES = [
+# LECCIONES — importado desde core/datos.py (ver import al inicio de archivo)
+# Definición inline eliminada en F2 del refactor arquitectural (2026-04-23)
+_LECCIONES_ARCHIVO_ORIGINAL = [  # bloque conservado para referencia, NO usado en runtime
     {
         "id": 0,
         "titulo": "¿Qué es la Resistencia a la Insulina?",
