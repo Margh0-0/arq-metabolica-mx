@@ -1,83 +1,21 @@
 import flet as ft
-import json
-import os
-from supabase import create_client
-from config.settings import SUPABASE_URL, SUPABASE_KEY
-
-supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+from config.settings import SUPABASE_URL, SUPABASE_KEY  # noqa: F401 — reexported for backwards compat
+from data.supabase_client import get_client  # noqa: F401
+from data.auth_repository import (
+    cargar_sesion,
+    guardar_sesion,
+    borrar_sesion,
+    obtener_usuario_actual,
+    cerrar_sesion,
+    iniciar_sesion,
+    registrar_usuario,
+)
 
 VERDE_OSCURO  = "#1B5E20"
 VERDE_MEDIO   = "#2E7D32"
 VERDE_CLARO   = "#66BB6A"
 BLANCO        = "#FFFFFF"
 BLANCO_SUAVE  = "#E8F5E9"
-
-SESION_FILE = "sesion_local.json"
-
-
-# ═══════════════════════════════════════════════════════════
-#  SESIÓN PERSISTENTE
-# ═══════════════════════════════════════════════════════════
-
-def guardar_sesion(user):
-    """Guarda los tokens de sesión en un archivo local."""
-    try:
-        sesion = supabase.auth.get_session()
-        if sesion:
-            datos = {
-                "access_token":  sesion.access_token,
-                "refresh_token": sesion.refresh_token,
-                "user_id":       user.id,
-                "user_email":    user.email,
-            }
-            with open(SESION_FILE, "w") as f:
-                json.dump(datos, f)
-    except Exception as ex:
-        print(f"[auth] No se pudo guardar sesion: {ex}")
-
-
-def cargar_sesion():
-    """Intenta restaurar la sesión desde el archivo local."""
-    if not os.path.exists(SESION_FILE):
-        return None
-    try:
-        with open(SESION_FILE, "r") as f:
-            datos = json.load(f)
-        resultado = supabase.auth.set_session(
-            datos["access_token"],
-            datos["refresh_token"],
-        )
-        return resultado.user if resultado else None
-    except Exception as ex:
-        print(f"[auth] No se pudo restaurar sesion: {ex}")
-        borrar_sesion()
-        return None
-
-
-def borrar_sesion():
-    """Elimina el archivo de sesión local."""
-    if os.path.exists(SESION_FILE):
-        os.remove(SESION_FILE)
-
-
-def obtener_usuario_actual():
-    """Devuelve el usuario activo o intenta restaurar desde archivo."""
-    try:
-        sesion = supabase.auth.get_session()
-        if sesion and sesion.user:
-            return sesion.user
-    except:
-        pass
-    return cargar_sesion()
-
-
-def cerrar_sesion():
-    """Cierra sesión en Supabase y borra el archivo local."""
-    try:
-        supabase.auth.sign_out()
-    except:
-        pass
-    borrar_sesion()
 
 
 # ═══════════════════════════════════════════════════════════
@@ -120,13 +58,9 @@ def pantalla_login(page: ft.Page, on_login_exitoso):
         error_text.value = ""
         page.update()
         try:
-            respuesta = supabase.auth.sign_in_with_password({
-                "email": email_field.value.strip(),
-                "password": password_field.value,
-            })
+            user = iniciar_sesion(email_field.value.strip(), password_field.value)
             loading.visible = False
-            guardar_sesion(respuesta.user)  # ← guarda sesión local
-            on_login_exitoso(respuesta.user)
+            on_login_exitoso(user)
         except Exception:
             loading.visible = False
             error_text.value = "Correo o contrasena incorrectos"
@@ -254,18 +188,14 @@ def pantalla_registro(page: ft.Page, on_registro_exitoso):
         error_text.value = ""
         page.update()
         try:
-            respuesta = supabase.auth.sign_up({
-                "email": email_field.value.strip(),
-                "password": password_field.value,
-            })
-            supabase.table("perfiles").insert({
-                "id": respuesta.user.id,
-                "nombre": nombre_field.value.strip(),
-                "municipio_actual": municipio_field.value,
-            }).execute()
+            user = registrar_usuario(
+                email=email_field.value.strip(),
+                password=password_field.value,
+                nombre=nombre_field.value.strip(),
+                municipio=municipio_field.value or "San Andres Cholula",
+            )
             loading.visible = False
-            guardar_sesion(respuesta.user)  # ← guarda sesión local
-            on_registro_exitoso(respuesta.user)
+            on_registro_exitoso(user)
         except Exception as ex:
             loading.visible = False
             error_text.value = f"Error: {str(ex)}"

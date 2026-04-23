@@ -1,2 +1,0 @@
-SUPABASE_URL = "https://ilfuuakjijaxqbqzygie.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlsZnV1YWtqaWpheHFicXp5Z2llIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyNjY1ODQsImV4cCI6MjA5MTg0MjU4NH0.4zSadOLL0_sEqp8RSKS-NCyOqiHtwUu2NrErNQxnjIg"
