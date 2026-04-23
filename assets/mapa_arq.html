@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;width:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f1f5f9}
+#map{position:absolute;inset:0}
+#panel{position:absolute;top:12px;right:12px;z-index:1000;
+  background:rgba(255,255,255,0.97);border-radius:16px;
+  padding:12px 14px;width:170px;
+  box-shadow:0 4px 20px rgba(0,0,0,0.18);
+  max-height:calc(100vh - 80px);overflow-y:auto}
+#panel h3{font-size:10px;color:#0ea5e9;margin:0 0 8px;
+  letter-spacing:.08em;text-transform:uppercase;font-weight:700}
+.mi{padding:7px 0;border-bottom:1px solid #f1f5f9;cursor:pointer;transition:opacity .15s}
+.mi:last-child{border-bottom:none}
+.mi:active{opacity:.6}
+.mn{font-size:11px;font-weight:600;color:#1e293b}
+.mv{font-size:15px;font-weight:800;margin:1px 0}
+.ml{font-size:9px;color:#94a3b8}
+#ley{position:absolute;bottom:28px;left:12px;z-index:1000;
+  background:rgba(255,255,255,0.96);border-radius:12px;
+  padding:10px 12px;box-shadow:0 2px 12px rgba(0,0,0,0.14);font-size:11px}
+.lr{display:flex;align-items:center;gap:6px;margin:3px 0;color:#1e293b}
+.ld{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.leaflet-popup-content-wrapper{
+  background:#fff;border-radius:14px;
+  box-shadow:0 4px 24px rgba(0,0,0,0.18);
+  border:none;color:#1e293b}
+.leaflet-popup-tip{background:#fff}
+.leaflet-popup-content{margin:12px 14px!important}
+.pt{font-size:12px;font-weight:700;color:#0ea5e9;margin-bottom:4px}
+.pi{font-size:28px;font-weight:900;margin:2px 0}
+.ps{font-size:10px;color:#94a3b8;margin-bottom:6px}
+.pv{display:flex;justify-content:space-between;font-size:11px;margin:3px 0;align-items:center}
+.pb{background:#e2e8f0;border-radius:3px;height:4px;width:100%;margin-top:1px;margin-bottom:4px}
+.pf{height:4px;border-radius:3px}
+.leaflet-control-attribution{font-size:9px!important}
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div id="panel"><h3>IARRI Municipal</h3><div id="lm"></div></div>
+<div id="ley">
+  <div style="font-size:10px;font-weight:700;color:#0ea5e9;margin-bottom:6px">LEYENDA</div>
+  <div class="lr"><div class="ld" style="background:#22c55e"></div>Áreas verdes</div>
+  <div class="lr"><div class="ld" style="background:#8b5cf6"></div>Deportivo</div>
+  <div class="lr"><div class="ld" style="background:#0ea5e9"></div>Peatonal</div>
+  <div class="lr"><div class="ld" style="background:#ef4444"></div>Riesgo alim.</div>
+  <div style="margin-top:6px;padding-top:6px;border-top:1px solid #e2e8f0">
+  <div class="lr"><div class="ld" style="background:#22c55e;opacity:.5"></div>Bajo riesgo</div>
+  <div class="lr"><div class="ld" style="background:#f59e0b;opacity:.5"></div>Medio riesgo</div>
+  <div class="lr"><div class="ld" style="background:#ef4444;opacity:.5"></div>Alto riesgo</div>
+  </div>
+</div>
+<script>
+const MU = [{"nombre": "San Andrés Cholula", "lat": 19.0514, "lon": -98.302, "iarri": 0.358, "nivel": "Medio", "color": "#f59e0b", "AV": 0.8, "IC": 0.6, "ED": 0.4, "EAR": 0.45, "IMP": 0.1, "pois": [{"lat": 19.054, "lon": -98.306, "tipo": "verde", "titulo": "Parque Paseo Cholula", "desc": "Área verde · AV +0.12"}, {"lat": 19.049, "lon": -98.298, "tipo": "verde", "titulo": "Jardines de Zavaleta", "desc": "Corredor verde · AV +0.08"}, {"lat": 19.0514, "lon": -98.302, "tipo": "deporte", "titulo": "Unidad Deportiva SAC", "desc": "Canchas y gimnasio · ED +0.10"}, {"lat": 19.0475, "lon": -98.304, "tipo": "peatonal", "titulo": "Zona Peatonal Centro", "desc": "Caminabilidad alta · IC +0.15"}, {"lat": 19.053, "lon": -98.299, "tipo": "ultra", "titulo": "Zona Comercial Galerías", "desc": "Ultraprocesados densos"}], "activo": true}, {"nombre": "San Pablo Xochimehuacan", "lat": 19.031, "lon": -98.236, "iarri": 0.615, "nivel": "Medio", "color": "#f59e0b", "AV": 0.5, "IC": 0.35, "ED": 0.2, "EAR": 0.6, "IMP": 0.55, "pois": [{"lat": 19.032, "lon": -98.235, "tipo": "ultra", "titulo": "Corredor Comercial", "desc": "Tiendas · EAR +0.18"}, {"lat": 19.029, "lon": -98.238, "tipo": "verde", "titulo": "Área verde escasa", "desc": "Solo 2.8 m²/hab"}, {"lat": 19.031, "lon": -98.234, "tipo": "deporte", "titulo": "Campo Municipal", "desc": "ED básico"}], "activo": false}, {"nombre": "Cuautlancingo", "lat": 19.0897, "lon": -98.273, "iarri": 0.78, "nivel": "Alto", "color": "#ef4444", "AV": 0.3, "IC": 0.2, "ED": 0.1, "EAR": 0.8, "IMP": 0.7, "pois": [{"lat": 19.092, "lon": -98.275, "tipo": "ultra", "titulo": "Corredor OXXO/7Eleven", "desc": "EAR +0.22"}, {"lat": 19.088, "lon": -98.271, "tipo": "ultra", "titulo": "Zona Industrial", "desc": "Ultraprocesados"}, {"lat": 19.0897, "lon": -98.273, "tipo": "deporte", "titulo": "Campo Municipal", "desc": "ED 0.08"}, {"lat": 19.087, "lon": -98.276, "tipo": "verde", "titulo": "Área verde crítica", "desc": "Solo 1.1 m²/hab"}], "activo": false}];
+const TI = {"verde": {"color": "#22c55e", "emoji": "🌳"}, "deporte": {"color": "#8b5cf6", "emoji": "⚽"}, "peatonal": {"color": "#0ea5e9", "emoji": "🚶"}, "ultra": {"color": "#ef4444", "emoji": "🍟"}};
+
+// ── Mapa con tiles CartoDB (aspecto similar a Google Maps, sin API key) ──
+const map = L.map('map', {
+  center: [19.0514, -98.302],
+  zoom: 13,
+  zoomControl: true,
+  attributionControl: true,
+});
+
+// CartoDB Positron — tiles limpios y modernos similares a Google Maps
+L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
+  subdomains: 'abcd',
+  maxZoom: 19,
+  minZoom: 10,
+}).addTo(map);
+
+// ── Opción Google Maps (necesita API key — descomentar si tienes una) ──
+// L.tileLayer('https://mt1.google.com/vt/lyrs=r&x={x}&y={y}&z={z}&key=TU_API_KEY', {
+//   attribution: 'Google Maps', maxZoom: 20,
+// }).addTo(map);
+
+// ── Popup de municipio ──
+function popMuni(m) {
+  const vars = [
+    {k:'AV', l:'Áreas Verdes', i:'🌳', inv:true},
+    {k:'IC', l:'Caminabilidad', i:'🚶', inv:true},
+    {k:'ED', l:'Equip. Dep.', i:'⚽', inv:true},
+    {k:'EAR',l:'Entorno Alim.',i:'🍟', inv:false},
+    {k:'IMP',l:'Marginación',  i:'📉', inv:false},
+  ];
+  const rows = vars.map(v => {
+    const val = m[v.k];
+    const risk = v.inv ? (1 - val) : val;
+    const c = risk < 0.33 ? '#22c55e' : risk < 0.66 ? '#f59e0b' : '#ef4444';
+    return `<div class="pv">
+      <span style="color:#64748b">${v.i} ${v.l}</span>
+      <span style="color:${c};font-weight:700">${val.toFixed(2)}</span>
+    </div>
+    <div class="pb"><div class="pf" style="width:${val*100}%;background:${c}"></div></div>`;
+  }).join('');
+  return `<div style="min-width:200px">
+    <div class="pt">${m.nombre}</div>
+    <div class="pi" style="color:${m.color}">${m.iarri.toFixed(2)}</div>
+    <div class="ps">Riesgo ${m.nivel} &nbsp;·&nbsp; Prob RI ${(10 + 50*m.iarri).toFixed(0)}%</div>
+    <div style="border-top:1px solid #e2e8f0;padding-top:6px">${rows}</div>
+  </div>`;
+}
+
+// ── Icono personalizado para POI ──
+function iconPOI(tipo) {
+  const t = TI[tipo] || {color:'#64748b', emoji:'📍'};
+  return L.divIcon({
+    html: `<div style="
+      background:${t.color};width:32px;height:32px;border-radius:50%;
+      display:flex;align-items:center;justify-content:center;font-size:15px;
+      box-shadow:0 2px 8px rgba(0,0,0,.35);border:2px solid #fff;">
+        ${t.emoji}
+      </div>`,
+    className: '',
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+    popupAnchor: [0, -18],
+  });
+}
+
+// ── Dibujar municipios ──
+const lm = document.getElementById('lm');
+
+MU.forEach(m => {
+  // Círculo de zona de riesgo
+  L.circle([m.lat, m.lon], {
+    radius: 800 + m.iarri * 1800,
+    color: m.color,
+    fillColor: m.color,
+    fillOpacity: 0.13,
+    weight: m.activo ? 3 : 2,
+    dashArray: m.activo ? null : '6,4',
+  }).bindPopup(popMuni(m), {maxWidth: 260}).addTo(map);
+
+  // Marcador de etiqueta con score IARRI
+  const borde = m.activo ? '2px solid #ffffff' : '1.5px solid rgba(255,255,255,0.6)';
+  const sombra = m.activo
+    ? '0 4px 16px rgba(0,0,0,0.45)'
+    : '0 2px 8px rgba(0,0,0,0.25)';
+  const ico = L.divIcon({
+    html: `<div style="
+      background:${m.color};padding:4px 10px;border-radius:10px;
+      font-size:11px;font-weight:700;color:#fff;
+      box-shadow:${sombra};border:${borde};
+      white-space:nowrap;letter-spacing:.01em">
+      ${m.nombre.split(' ')[0]} &nbsp;<span style="font-size:13px">${m.iarri.toFixed(2)}</span>
+    </div>`,
+    className: '',
+    iconAnchor: [50, 14],
+    popupAnchor: [0, -16],
+  });
+  L.marker([m.lat, m.lon], {icon: ico})
+    .bindPopup(popMuni(m), {maxWidth: 260})
+    .addTo(map);
+
+  // POIs del municipio
+  (m.pois || []).forEach(p => {
+    L.marker([p.lat, p.lon], {icon: iconPOI(p.tipo)})
+      .bindPopup(`<div style="min-width:160px">
+        <b style="color:#0ea5e9;font-size:12px">${p.titulo}</b><br>
+        <span style="font-size:11px;color:#64748b">${p.desc}</span>
+      </div>`, {maxWidth: 220})
+      .addTo(map);
+  });
+
+  // Panel lateral
+  const d = document.createElement('div');
+  d.className = 'mi';
+  d.innerHTML = `
+    <div class="mn">${m.nombre}</div>
+    <div class="mv" style="color:${m.color}">${m.iarri.toFixed(2)}</div>
+    <div class="ml">Riesgo ${m.nivel}</div>`;
+  d.onclick = () => map.flyTo([m.lat, m.lon], 14, {duration: 1.2, easeLinearity: 0.5});
+  lm.appendChild(d);
+});
+</script>
+</body>
+</html>

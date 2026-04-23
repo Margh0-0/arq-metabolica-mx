@@ -1,0 +1,8 @@
+﻿clave_municipio,nombre,poblacion_2020,densidad_hab_km2,areas_verdes_m2_hab,indice_marginacion,grado_marginacion,equipamiento_dep_10k,movilidad_peatonal,EAR,fuente
+21007,San Andrés Cholula,115613,4823,6.2,-1.412,Muy bajo,3.8,0.62,0.41,INEGI Censo 2020 + CONAPO IMM 2020 (datos verificados)
+21132,San Pablo Xochimehuacan,52408,8247,2.8,0.234,Medio,1.9,0.35,0.62,INEGI Censo 2020 + CONAPO IMM 2020 (datos verificados)
+21034,Cuautlancingo,103994,11423,1.1,0.687,Alto,0.8,0.22,0.78,INEGI Censo 2020 + CONAPO IMM 2020 (datos verificados)
+21114,Puebla (centro),1692181,2148,4.9,-0.891,Muy bajo,5.2,0.71,0.36,INEGI Censo 2020 + CONAPO IMM 2020 (datos verificados)
+21119,San Pedro Cholula,138811,3912,5.1,-0.743,Muy bajo,4.1,0.58,0.35,INEGI Censo 2020 + CONAPO IMM 2020 (datos verificados)
+21015,Amozoc,96769,2634,1.8,0.412,Medio,2.1,0.41,0.55,INEGI Censo 2020 + CONAPO IMM 2020 (datos verificados)
+21043,Coronango,57294,1876,3.2,0.108,Bajo,2.8,0.48,0.37,INEGI Censo 2020 + CONAPO IMM 2020 (datos verificados)

@@ -1,0 +1,71 @@
+<!DOCTYPE html><html><head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}html,body{height:100%;font-family:sans-serif}
+#map{height:100vh;width:100vw}
+#panel{position:absolute;top:10px;right:10px;z-index:1000;background:rgba(15,23,42,.93);
+border-radius:14px;padding:12px 14px;width:185px;border:1px solid #334155;
+color:#e2e8f0;max-height:80vh;overflow-y:auto}
+#panel h3{font-size:11px;color:#38bdf8;margin-bottom:8px;letter-spacing:1px;text-transform:uppercase}
+.mi{padding:6px 0;border-bottom:1px solid #1e293b;cursor:pointer}
+.mi:last-child{border-bottom:none}.mn{font-size:11px;font-weight:600}
+.mv{font-size:14px;font-weight:900}.ml{font-size:10px;color:#64748b}
+.leaflet-popup-content-wrapper{background:#0f172a;border:1px solid #334155;
+border-radius:12px;color:#e2e8f0}
+.leaflet-popup-tip{background:#0f172a}
+.pt{font-size:13px;font-weight:700;color:#38bdf8;margin-bottom:4px}
+.pi{font-size:24px;font-weight:900;margin:2px 0}
+.ps{font-size:11px;color:#64748b}
+.pv{display:flex;justify-content:space-between;font-size:11px;margin:2px 0}
+.pb{background:#1e293b;border-radius:3px;height:5px;width:100%;margin-top:2px}
+.pf{height:5px;border-radius:3px}
+</style></head><body>
+<div id="map"></div>
+<div id="panel"><h3>IARRI Municipal</h3><div id="lm"></div></div>
+<script>
+const MU=[{"nombre": "San Andrés Cholula", "lat": 19.0514, "lon": -98.302, "iarri": 0.358, "nivel": "Medio", "color": "#f59e0b", "AV": 0.8, "IC": 0.6, "ED": 0.4, "EAR": 0.45, "IMP": 0.1, "pois": [{"lat": 19.054, "lon": -98.306, "tipo": "verde", "titulo": "Parque Paseo Cholula", "desc": "Área verde · AV +0.12"}, {"lat": 19.049, "lon": -98.298, "tipo": "verde", "titulo": "Jardines de Zavaleta", "desc": "Corredor verde · AV +0.08"}, {"lat": 19.0514, "lon": -98.302, "tipo": "deporte", "titulo": "Unidad Deportiva SAC", "desc": "Canchas y gimnasio · ED +0.10"}, {"lat": 19.0475, "lon": -98.304, "tipo": "peatonal", "titulo": "Zona Peatonal Centro", "desc": "Caminabilidad alta · IC +0.15"}, {"lat": 19.053, "lon": -98.299, "tipo": "ultra", "titulo": "Zona Comercial Galerías", "desc": "Ultraprocesados densos"}]}, {"nombre": "San Pablo Xochimehuacan", "lat": 19.031, "lon": -98.236, "iarri": 0.615, "nivel": "Medio", "color": "#f59e0b", "AV": 0.5, "IC": 0.35, "ED": 0.2, "EAR": 0.6, "IMP": 0.55, "pois": [{"lat": 19.032, "lon": -98.235, "tipo": "ultra", "titulo": "Corredor Comercial", "desc": "Tiendas · EAR +0.18"}, {"lat": 19.029, "lon": -98.238, "tipo": "verde", "titulo": "Área verde escasa", "desc": "Solo 2.8 m²/hab"}, {"lat": 19.031, "lon": -98.234, "tipo": "deporte", "titulo": "Campo Municipal", "desc": "ED básico"}]}, {"nombre": "Cuautlancingo", "lat": 19.0897, "lon": -98.273, "iarri": 0.78, "nivel": "Alto", "color": "#ef4444", "AV": 0.3, "IC": 0.2, "ED": 0.1, "EAR": 0.8, "IMP": 0.7, "pois": [{"lat": 19.092, "lon": -98.275, "tipo": "ultra", "titulo": "Corredor OXXO/7Eleven", "desc": "EAR +0.22"}, {"lat": 19.088, "lon": -98.271, "tipo": "ultra", "titulo": "Zona Industrial", "desc": "Ultraprocesados"}, {"lat": 19.0897, "lon": -98.273, "tipo": "deporte", "titulo": "Campo Municipal", "desc": "ED 0.08"}, {"lat": 19.087, "lon": -98.276, "tipo": "verde", "titulo": "Área verde crítica", "desc": "Solo 1.1 m²/hab"}]}];const TI={"verde": {"color": "#22c55e", "emoji": "🌳"}, "deporte": {"color": "#8b5cf6", "emoji": "⚽"}, "peatonal": {"color": "#0ea5e9", "emoji": "🚶"}, "ultra": {"color": "#ef4444", "emoji": "🍟"}};
+const map=L.map('map',{center:[19.0514,-98.302],zoom:13});
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+  {attribution:'OpenStreetMap',maxZoom:19}).addTo(map);
+function popM(m){
+  const vs=[{k:'AV',l:'Areas Verdes',i:'🌳',inv:true},
+    {k:'IC',l:'Caminabilidad',i:'🚶',inv:true},
+    {k:'ED',l:'Equip Dep',i:'⚽',inv:true},
+    {k:'EAR',l:'Entorno Alim',i:'🍟',inv:false},
+    {k:'IMP',l:'Marginacion',i:'📉',inv:false}];
+  const f=vs.map(v=>{const val=m[v.k],r=v.inv?(1-val):val,
+    c=r<.33?'#22c55e':r<.66?'#f59e0b':'#ef4444';
+    return `<div class="pv"><span>${v.i} ${v.l}</span>
+    <span style="color:${c};font-weight:700">${val.toFixed(2)}</span></div>
+    <div class="pb"><div class="pf" style="width:${val*100}%;background:${c}"></div></div>`;}).join('');
+  return `<div style="min-width:185px"><div class="pt">${m.nombre}</div>
+    <div class="pi" style="color:${m.color}">${m.iarri.toFixed(2)}</div>
+    <div class="ps">Riesgo ${m.nivel} · Prob RI ${(10+50*m.iarri).toFixed(0)}%</div>
+    <div style="margin-top:8px;border-top:1px solid #1e293b;padding-top:6px">${f}</div></div>`;}
+function icoP(tipo){const c=TI[tipo]||{color:'#888',emoji:'📍'};
+  return L.divIcon({html:`<div style="background:${c.color};width:28px;height:28px;
+    border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,.5)">${c.emoji}</div>`,
+    className:'',iconSize:[28,28],iconAnchor:[14,14]});}
+const lm=document.getElementById('lm');
+MU.forEach(m=>{
+  L.circle([m.lat,m.lon],{radius:700+m.iarri*1800,color:m.color,fillColor:m.color,fillOpacity:.15,weight:2})
+    .bindPopup(popM(m),{maxWidth:260}).addTo(map);
+  const ico=L.divIcon({html:`<div style="background:${m.color};padding:3px 8px;
+    border-radius:8px;font-size:11px;font-weight:700;color:#000;
+    box-shadow:0 2px 10px rgba(0,0,0,.4);white-space:nowrap">
+    ${m.nombre.split(' ')[0]} ${m.iarri.toFixed(2)}</div>`,className:'',iconAnchor:[45,12]});
+  L.marker([m.lat,m.lon],{icon:ico}).bindPopup(popM(m),{maxWidth:260}).addTo(map);
+  (m.pois||[]).forEach(p=>{
+    L.marker([p.lat,p.lon],{icon:icoP(p.tipo)})
+      .bindPopup(`<div style="min-width:145px"><b style="color:#38bdf8">${p.titulo}</b><br>
+        <span style="font-size:11px;color:#64748b">${p.desc}</span></div>`,{maxWidth:220}).addTo(map);});
+  const d=document.createElement('div');d.className='mi';
+  d.innerHTML=`<div class="mn">${m.nombre}</div>
+    <div class="mv" style="color:${m.color}">${m.iarri.toFixed(2)}</div>
+    <div class="ml">Riesgo ${m.nivel}</div>`;
+  d.onclick=()=>map.flyTo([m.lat,m.lon],14,{duration:1});lm.appendChild(d);});
+</script></body></html>
