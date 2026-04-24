@@ -375,3 +375,288 @@ LECCIONES = [
         ],
     },
 ]
+
+# ─── MICROCURSOS ──────────────────────────────────────────────────────────────
+# Módulo de educación interactiva gamificada.
+# Cada microcurso agrupa lecciones por tema, tiene XP, nivel y badge propio.
+# Los IDs de lecciones referencian el campo "id" en LECCIONES.
+
+MICROCURSOS = [
+    {
+        "id": "mc_ri",
+        "titulo": "¿Qué es la Resistencia a la Insulina?",
+        "descripcion": "Descubre cómo funciona la insulina, por qué el cuerpo puede volverse resistente y qué señales debes identificar.",
+        "emoji": "🔬",
+        "color": _ACCENT,
+        "nivel_nombre": "Fundamentos",
+        "xp_total": 150,
+        "badge_emoji": "🧬",
+        "badge_nombre": "Experto en Insulina",
+        "lecciones_ids": [0],
+        "evaluacion": {
+            "titulo": "Evaluación: Resistencia a la Insulina",
+            "descripcion": "Demuestra lo que aprendiste sobre la hormona que controla tu energía.",
+            "preguntas": [
+                {
+                    "pregunta": "¿Cuál es la función principal de la insulina en el cuerpo?",
+                    "opciones": [
+                        "Descomponer las grasas en el hígado",
+                        "Permitir que la glucosa entre a las células para producir energía",
+                        "Regular la presión arterial",
+                        "Producir glóbulos rojos",
+                    ],
+                    "correcta": 1,
+                    "explicacion": "La insulina es la 'llave' que abre las células para que la glucosa pueda entrar y convertirse en energía.",
+                    "xp": 30,
+                },
+                {
+                    "pregunta": "¿Qué ocurre cuando las células se vuelven resistentes a la insulina?",
+                    "opciones": [
+                        "El páncreas produce menos insulina inmediatamente",
+                        "El cuerpo quema más grasa automáticamente",
+                        "El páncreas produce más insulina para compensar la resistencia",
+                        "La glucosa se elimina por la orina sin consecuencias",
+                    ],
+                    "correcta": 2,
+                    "explicacion": "El páncreas trabaja en exceso tratando de vencer la resistencia. Con el tiempo se agota, lo que puede llevar a diabetes tipo 2.",
+                    "xp": 30,
+                },
+                {
+                    "pregunta": "¿Cuál es la señal de alerta cutánea de la resistencia a la insulina?",
+                    "opciones": [
+                        "Manchas rojas en brazos",
+                        "Piel escamosa en manos",
+                        "Piel oscura en cuello o axilas (acantosis nigricans)",
+                        "Uñas amarillas",
+                    ],
+                    "correcta": 2,
+                    "explicacion": "La acantosis nigricans es una hiperpigmentación en pliegues de la piel directamente asociada a la hiperinsulinemia.",
+                    "xp": 30,
+                },
+                {
+                    "pregunta": "¿Qué porcentaje de adultos mexicanos tiene resistencia a la insulina?",
+                    "opciones": ["5%", "15%", "30%", "50%"],
+                    "correcta": 2,
+                    "explicacion": "Más del 30% de la población adulta en México tiene algún grado de RI, muchas veces sin síntomas evidentes.",
+                    "xp": 30,
+                },
+                {
+                    "pregunta": "¿Cuál de estos NO es un síntoma típico de resistencia a la insulina?",
+                    "opciones": [
+                        "Cansancio intenso después de comer",
+                        "Antojos frecuentes de azúcar",
+                        "Dificultad para bajar de peso en el abdomen",
+                        "Visión doble constante",
+                    ],
+                    "correcta": 3,
+                    "explicacion": "La visión doble no es característica de la RI. Los síntomas clásicos son fatiga postprandial, antojos y adiposidad abdominal.",
+                    "xp": 30,
+                },
+            ],
+        },
+    },
+    {
+        "id": "mc_entorno",
+        "titulo": "Entorno Construido y Salud Metabólica",
+        "descripcion": "Entiende cómo el diseño de tu ciudad, tus calles y tu barrio influyen directamente en el riesgo de resistencia a la insulina.",
+        "emoji": "🏙️",
+        "color": _ACCENT3,
+        "nivel_nombre": "Territorio y Salud",
+        "xp_total": 200,
+        "badge_emoji": "🗺️",
+        "badge_nombre": "Urbanista Metabólico",
+        "lecciones_ids": [1, 6],
+        "evaluacion": {
+            "titulo": "Evaluación: Entorno y Metabolismo",
+            "descripcion": "Ponemos a prueba tu comprensión del vínculo entre ciudad y salud.",
+            "preguntas": [
+                {
+                    "pregunta": "¿Cuántos m² de área verde por habitante recomienda la OMS?",
+                    "opciones": ["3 m²", "6 m²", "9 m²", "12 m²"],
+                    "correcta": 2,
+                    "explicacion": "La OMS establece 9 m² por habitante como estándar mínimo para promover la actividad física espontánea y el bienestar.",
+                    "xp": 40,
+                },
+                {
+                    "pregunta": "¿Cuál municipio de Puebla tiene el mayor entorno alimentario riesgoso (EAR)?",
+                    "opciones": ["San Andrés Cholula", "San Pablo Xochimehuacan", "Cuautlancingo", "Puebla Centro"],
+                    "correcta": 2,
+                    "explicacion": "Cuautlancingo tiene EAR=0.80, con alta densidad de tiendas de ultraprocesados, lo que eleva el riesgo metabólico de sus habitantes.",
+                    "xp": 40,
+                },
+                {
+                    "pregunta": "¿Qué mide el Índice IARRI-MX?",
+                    "opciones": [
+                        "La calidad del aire urbano",
+                        "El riesgo metabólico del entorno construido",
+                        "La densidad de hospitales por municipio",
+                        "El nivel socioeconómico promedio",
+                    ],
+                    "correcta": 1,
+                    "explicacion": "IARRI-MX combina 5 variables: áreas verdes, caminabilidad, equipamiento deportivo, entorno alimentario e índice de marginación.",
+                    "xp": 40,
+                },
+                {
+                    "pregunta": "¿Cuál de estas variables del IARRI-MX es 'inversa' (mayor valor = menor riesgo)?",
+                    "opciones": [
+                        "EAR - Entorno Alimentario Riesgoso",
+                        "IMP - Índice de Marginación",
+                        "AV - Áreas Verdes",
+                        "Ninguna de las anteriores",
+                    ],
+                    "correcta": 2,
+                    "explicacion": "AV, IC y ED son inversas: más áreas verdes, caminabilidad y equipamiento deportivo = menor riesgo. EAR e IMP son directas.",
+                    "xp": 40,
+                },
+                {
+                    "pregunta": "¿Qué tipo de diseño urbano promueve el sedentarismo?",
+                    "opciones": [
+                        "Ciudades con ciclovías y banquetas amplias",
+                        "Barrios con plazas y parques accesibles",
+                        "Ciudades diseñadas para el automóvil, sin áreas peatonales",
+                        "Colonias con equipamiento deportivo público",
+                    ],
+                    "correcta": 2,
+                    "explicacion": "El urban sprawl centrado en el auto elimina la actividad física cotidiana (caminar al trabajo, a la tienda, etc.), aumentando el riesgo metabólico.",
+                    "xp": 40,
+                },
+            ],
+        },
+    },
+    {
+        "id": "mc_prevencion",
+        "titulo": "Prevención Activa",
+        "descripcion": "Aprende estrategias prácticas de arquitectura preventiva, alimentación y actividad física para reducir tu riesgo metabólico.",
+        "emoji": "🏃",
+        "color": _LOW,
+        "nivel_nombre": "Acción",
+        "xp_total": 250,
+        "badge_emoji": "🏅",
+        "badge_nombre": "Agente Preventivo",
+        "lecciones_ids": [2, 3, 4],
+        "evaluacion": {
+            "titulo": "Evaluación: Prevención Activa",
+            "descripcion": "Demuestra que puedes aplicar lo aprendido para mejorar tu entorno y hábitos.",
+            "preguntas": [
+                {
+                    "pregunta": "¿Cuántos minutos de caminata diaria reducen hasta 30% el riesgo de diabetes tipo 2?",
+                    "opciones": ["10 minutos", "20 minutos", "30 minutos", "60 minutos"],
+                    "correcta": 2,
+                    "explicacion": "30 minutos de caminata diaria a ritmo moderado mejoran significativamente la sensibilidad a la insulina según múltiples estudios.",
+                    "xp": 50,
+                },
+                {
+                    "pregunta": "¿Cuál es la principal razón por la que el músculo consume glucosa sin insulina?",
+                    "opciones": [
+                        "El músculo produce su propia insulina local",
+                        "Durante el ejercicio, las células musculares activan transportadores GLUT4 independientes de insulina",
+                        "El glucógeno muscular reemplaza a la insulina",
+                        "La adrenalina actúa como insulina durante el ejercicio",
+                    ],
+                    "correcta": 1,
+                    "explicacion": "Durante el ejercicio, la contracción muscular activa transportadores GLUT4 que permiten la entrada de glucosa SIN necesitar insulina. Por eso el ejercicio es tan poderoso.",
+                    "xp": 50,
+                },
+                {
+                    "pregunta": "¿Qué alimento tiene bajo índice glucémico y protege al páncreas?",
+                    "opciones": ["Pan blanco", "Refresco de cola", "Avena integral", "Papas fritas"],
+                    "correcta": 2,
+                    "explicacion": "La avena tiene bajo índice glucémico: libera glucosa lentamente, evitando picos de insulina que con el tiempo generan resistencia.",
+                    "xp": 50,
+                },
+                {
+                    "pregunta": "¿Qué característica arquitectónica simple aumenta la actividad física sin esfuerzo consciente?",
+                    "opciones": [
+                        "Elevadores rápidos y modernos",
+                        "Escaleras visibles, amplias y atractivas",
+                        "Estacionamientos grandes cerca de la entrada",
+                        "Pasillos cortos para minimizar recorridos",
+                    ],
+                    "correcta": 1,
+                    "explicacion": "Las escaleras visibles y bien diseñadas aumentan hasta 30% su uso frente a los elevadores, sumando actividad física cotidiana sin que la persona lo 'decida'.",
+                    "xp": 50,
+                },
+                {
+                    "pregunta": "¿Qué porcentaje del plato debe corresponder a verduras y frutas según el 'plato del buen comer'?",
+                    "opciones": ["25%", "35%", "50%", "75%"],
+                    "correcta": 2,
+                    "explicacion": "El plato saludable se divide en: 50% verduras y frutas, 25% cereales integrales y 25% proteínas de calidad.",
+                    "xp": 50,
+                },
+            ],
+        },
+    },
+    {
+        "id": "mc_estres_sueno",
+        "titulo": "Estrés, Sueño y Metabolismo",
+        "descripcion": "Explora el impacto del estrés crónico y la falta de sueño en la resistencia a la insulina, y cómo el diseño del espacio puede ayudarte.",
+        "emoji": "😴",
+        "color": _ACCENT3,
+        "nivel_nombre": "Factores Invisibles",
+        "xp_total": 150,
+        "badge_emoji": "🌙",
+        "badge_nombre": "Maestro del Descanso",
+        "lecciones_ids": [5],
+        "evaluacion": {
+            "titulo": "Evaluación: Estrés y Sueño",
+            "descripcion": "Comprueba tu dominio sobre los factores metabólicos que no siempre se ven.",
+            "preguntas": [
+                {
+                    "pregunta": "¿Qué hormona del estrés eleva la glucosa en sangre?",
+                    "opciones": ["Serotonina", "Cortisol", "Melatonina", "Leptina"],
+                    "correcta": 1,
+                    "explicacion": "El cortisol es la hormona del estrés. Cuando se libera crónicamente, eleva la glucosa y obliga al páncreas a producir más insulina, generando resistencia.",
+                    "xp": 30,
+                },
+                {
+                    "pregunta": "¿Cuántas horas de sueño mínimo se necesitan para no aumentar la resistencia a la insulina?",
+                    "opciones": ["4 horas", "6 horas", "8 horas", "10 horas"],
+                    "correcta": 1,
+                    "explicacion": "Dormir menos de 6 horas por noche aumenta la resistencia a la insulina en tan solo una semana, según estudios clínicos controlados.",
+                    "xp": 30,
+                },
+                {
+                    "pregunta": "¿Cuál elemento del diseño arquitectónico ayuda a reducir el cortisol?",
+                    "opciones": [
+                        "Techos altos sin ventanas",
+                        "Pasillos angostos y oscuros",
+                        "Luz natural, ventilación cruzada y acceso a áreas verdes",
+                        "Aislamiento total del exterior",
+                    ],
+                    "correcta": 2,
+                    "explicacion": "Estudios de neuroarquitectura demuestran que la luz natural, las vistas a vegetación y la ventilación reducen los niveles de cortisol y mejoran el sueño.",
+                    "xp": 30,
+                },
+                {
+                    "pregunta": "¿Qué hormona regula el apetito y se desregula con la falta de sueño?",
+                    "opciones": ["Insulina", "Adrenalina", "Grelina y leptina", "Tiroxina"],
+                    "correcta": 2,
+                    "explicacion": "La grelina (hormona del hambre) aumenta y la leptina (saciedad) disminuye cuando dormimos mal, generando mayor consumo calórico al día siguiente.",
+                    "xp": 30,
+                },
+                {
+                    "pregunta": "¿Qué relación tiene el estrés crónico con la diabetes tipo 2?",
+                    "opciones": [
+                        "No tiene relación directa",
+                        "Reduce la producción de insulina temporalmente",
+                        "El cortisol crónico genera resistencia a la insulina que puede derivar en diabetes tipo 2",
+                        "Solo afecta a personas con predisposición genética",
+                    ],
+                    "correcta": 2,
+                    "explicacion": "El estrés crónico mantiene el cortisol elevado de forma permanente, lo que genera resistencia a la insulina sostenida. Es un factor de riesgo independiente para diabetes tipo 2.",
+                    "xp": 30,
+                },
+            ],
+        },
+    },
+]
+
+# ─── NIVELES DE XP ────────────────────────────────────────────────────────────
+# Sistema de progresión del módulo educativo
+NIVELES_XP = [
+    {"nivel": 1, "titulo": "Aprendiz",          "xp_min": 0,   "emoji": "🌱"},
+    {"nivel": 2, "titulo": "Explorador",         "xp_min": 100, "emoji": "🔍"},
+    {"nivel": 3, "titulo": "Investigador",       "xp_min": 250, "emoji": "🔬"},
+    {"nivel": 4, "titulo": "Analista Urbano",    "xp_min": 450, "emoji": "🏙️"},
+    {"nivel": 5, "titulo": "Experto IARRI",      "xp_min": 700, "emoji": "⭐"},
+]

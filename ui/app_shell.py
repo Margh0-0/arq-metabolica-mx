@@ -53,12 +53,12 @@ def main(page: ft.Page):
         padding=ft.padding.symmetric(horizontal=16, vertical=8),
     )
 
-    nav_labels = ["Inicio", "Mapa", "Calcular", "Intervención"]
-    nav_icons  = ["🏠", "🗺️", "🧮", "🛡️"]
+    nav_labels = ["Inicio", "Mapa", "Calcular", "Intervención", "Aprender"]
+    nav_icons  = ["🏠", "🗺️", "🧮", "🛡️", "📚"]
     nav_items  = []
 
     def build_screen(idx):
-        builders = [build_inicio, build_mapa, build_calculadora, build_recomendaciones, build_perfil]
+        builders = [build_inicio, build_mapa, build_calculadora, build_recomendaciones, build_educacion, build_perfil]
         return builders[idx](page, state)
 
     def switch_tab(idx):
@@ -69,7 +69,7 @@ def main(page: ft.Page):
             return
         state["tab"] = idx
         nav_items.clear()
-        for i in range(4):
+        for i in range(5):
             nav_items.append(make_nav(i, active=(i == idx)))
         nav_bar.content = ft.Row(nav_items, expand=True,
                                  alignment=ft.MainAxisAlignment.SPACE_AROUND)
@@ -127,7 +127,7 @@ def main(page: ft.Page):
                 pass
         # Limpiar estado completo
         keys = [k for k in list(state.keys())
-                if k.startswith("leccion_") or k.startswith("slider_")]
+                if k.startswith("leccion_") or k.startswith("slider_") or k.startswith("mc_")]
         for k in keys:
             del state[k]
         state["muni_idx"]    = 0
@@ -147,7 +147,7 @@ def main(page: ft.Page):
     state["rebuild_app"] = rebuild_app
 
     # ── Barra de navegación ───────────────────────────────────
-    for i in range(4):
+    for i in range(5):
         nav_items.append(make_nav(i, active=(i == 0)))
 
     nav_bar = ft.Container(
@@ -197,7 +197,7 @@ def main(page: ft.Page):
 
         # Reconstruir nav items frescos
         nav_items.clear()
-        for i in range(4):
+        for i in range(5):
             nav_items.append(make_nav(i, active=(i == tab_activo)))
 
         # Reconstruir nav_bar con colores actuales
@@ -222,8 +222,8 @@ def main(page: ft.Page):
                 ft.IconButton(
                     icon=ft.Icons.PERSON,
                     icon_size=24,
-                    icon_color=ACCENT if tab_activo == 4 else MUTED,
-                    on_click=lambda e: state.get("_switch_tab", lambda x: None)(4),
+                    icon_color=ACCENT if tab_activo == 5 else MUTED,
+                    on_click=lambda e: state.get("_switch_tab", lambda x: None)(5),
                     tooltip="Mi Perfil",
                 ),
             ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
@@ -251,7 +251,7 @@ def main(page: ft.Page):
         def _new_switch_tab(idx):
             state["tab"] = idx
             nav_items.clear()
-            for i in range(4):
+            for i in range(5):
                 nav_items.append(make_nav(i, active=(i == idx)))
             nuevo_nav_bar.content = ft.Row(nav_items, expand=True,
                                            alignment=ft.MainAxisAlignment.SPACE_AROUND)
