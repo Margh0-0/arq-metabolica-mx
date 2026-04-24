@@ -668,12 +668,13 @@ MU.forEach(m=>{{
         ))
 
     # ════════════════════════════════════════════════════════
-    # SECCIÓN: TU COLONIA — perfil metabólico ambiental
+    # NAVEGACIÓN DE DOS VISTAS
+    # selector() → perfil() → selector()
     # ════════════════════════════════════════════════════════
-    colonias     = datos_ter.get("colonias", [])
-    perfil_col   = ft.Column([], visible=False, spacing=8)
-    colonias_col = ft.Column([], spacing=8)
+    colonias   = datos_ter.get("colonias", [])
+    contenido  = ft.Column([], scroll=ft.ScrollMode.AUTO, expand=True)
 
+    # ── Helpers de colonia ────────────────────────────────────
     def _chip_var(emoji: str, valor: float, inversa: bool) -> ft.Container:
         c = _color_var(valor, inversa)
         return ft.Container(
@@ -686,9 +687,7 @@ MU.forEach(m=>{{
         )
 
     def _tarjeta_colonia(col: dict) -> ft.Container:
-        diag   = _diagnostico_colonia(col)
-        activa = (col_estado["colonia"] is not None
-                  and col_estado["colonia"]["nombre"] == col["nombre"])
+        diag = _diagnostico_colonia(col)
         return ft.Container(
             content=ft.Column([
                 ft.Row([
@@ -727,33 +726,69 @@ MU.forEach(m=>{{
                 ], spacing=4),
             ], spacing=0),
             bgcolor=CARD,
-            border=ft.border.all(
-                2 if activa else 1,
-                diag["color"] + "99" if activa else BORDER,
-            ),
+            border=ft.border.all(1, BORDER),
             border_radius=14,
             padding=ft.padding.symmetric(horizontal=14, vertical=12),
             ink=True,
-            on_click=lambda e, c=col: _seleccionar_colonia(c),
-            shadow=ft.BoxShadow(
-                blur_radius=8 if activa else 2,
-                color=diag["color"] + ("33" if activa else "0a"),
-                offset=ft.Offset(0, 2),
-            ),
+            on_click=lambda e, c=col: render_perfil(c),
+            shadow=ft.BoxShadow(blur_radius=2, color="#0000000a", offset=ft.Offset(0, 1)),
         )
 
-    def _rebuild_colonias():
-        colonias_col.controls = [_tarjeta_colonia(c) for c in colonias]
+    # ── VISTA 1: selector ─────────────────────────────────────
+    def render_selector(update: bool = True):
+        contenido.controls = [
+            perfil_header,
+            ft.Container(height=10),
+            ft.Container(
+                content=mapa_widget,
+                border=ft.border.all(1, BORDER),
+                border_radius=16,
+                clip_behavior=ft.ClipBehavior.HARD_EDGE,
+                shadow=ft.BoxShadow(blur_radius=6, color="#0000000a", offset=ft.Offset(0, 2)),
+            ),
+            ft.Container(height=6),
+            leyenda,
+            ft.Container(height=14),
+            titulo_seccion("COMPARATIVA RÁPIDA"),
+            ft.Container(height=6),
+            *_mini(),
+            ft.Container(height=14),
+            titulo_seccion("VARIABLES TERRITORIALES — INEGI / DENUE / CONAPO"),
+            ft.Container(height=8),
+            _var_card("🌳", "Acceso a Áreas Verdes", f"{av_m2} m²/hab",
+                      "OMS: 9 m²/hab", av_pct, av_col, "0 m²",
+                      f"OMS 9 m² {'✓' if av_pct >= 1 else '✗'}"),
+            _var_card("🏘️", "Densidad Poblacional", f"{dens:,}/km²".replace(",", "  "),
+                      "INEGI Censo 2020", dens_pct, dens_col, "Baja", "Alta"),
+            _var_card("📉", "Índice de Marginación", f"{marg:.2f}",
+                      "CONAPO", marg, marg_col, "Sin marginación", "Muy alto"),
+            _var_card("⚽", "Equipamiento Deportivo", f"{equip}/10k hab",
+                      "Instalaciones activas", equip_pct, equip_col, "0",
+                      f"Ideal: {datos_ter.get('equip_ideal', 6)}/10k"),
+            _var_card("🚶", "Movilidad Peatonal", f"{movil*100:.0f}%",
+                      "Banquetas en buen estado", movil, movil_col, "0%", "100%"),
+            _var_card("🍟", "Entorno Alimentario Riesgoso", f"{ultra*100:.0f}%",
+                      "Ultraprocesados/total DENUE", ultra, ultra_col, "Sin riesgo", "100%"),
+            ft.Container(height=4),
+            titulo_seccion("TU COLONIA — PERFIL METABÓLICO AMBIENTAL"),
+            ft.Container(height=4),
+            ft.Text("Toca una colonia para ver su análisis detallado",
+                    size=11, color=MUTED),
+            ft.Container(height=8),
+            *[_tarjeta_colonia(c) for c in colonias],
+            ft.Container(height=14),
+            titulo_seccion("RANKING MUNICIPAL"),
+            ft.Container(height=8),
+            *rank_rows,
+            ft.Container(height=28),
+        ]
+        if update:
+            page.update()
 
-    def _rebuild_perfil():
-        col = col_estado["colonia"]
-        if col is None:
-            perfil_col.visible = False
-            perfil_col.controls = []
-            return
-
-        diag     = _diagnostico_colonia(col)
-        datos_m  = DATOS_TERRITORIALES.get(muni_nom, {})
+    # ── VISTA 2: perfil de colonia ────────────────────────────
+    def render_perfil(col: dict, update: bool = True):
+        diag    = _diagnostico_colonia(col)
+        datos_m = DATOS_TERRITORIALES.get(muni_nom, {})
 
         # Portada
         portada = ft.Container(
@@ -812,8 +847,8 @@ MU.forEach(m=>{{
 
         # 5 variables detalladas
         def _vd(emoji, tit, val_num, unidad, pct, inv, n_izq, n_der):
-            c       = _color_var(pct, inv)
-            p_clip  = max(0.0, min(1.0, pct))
+            c      = _color_var(pct, inv)
+            p_clip = max(0.0, min(1.0, pct))
             val_str = (f"{val_num:.1f}{unidad}" if isinstance(val_num, float)
                        else f"{val_num:,}{unidad}".replace(",", " "))
             return ft.Container(
@@ -960,15 +995,16 @@ MU.forEach(m=>{{
         ]
         for emoji, label, vc, vm, inv in filas_comp:
             delta = vc - vm
-            cc    = _color_var(vc, inv)
-            cm    = _color_var(vm, inv)
-            dc    = (LOW if delta > 0.02 else HIGH if delta < -0.02 else MID) if inv \
-                    else (HIGH if delta > 0.02 else LOW if delta < -0.02 else MID)
-            ds    = f"+{delta:.2f}" if delta > 0 else f"{delta:.2f}"
+            cc = _color_var(vc, inv)
+            cm = _color_var(vm, inv)
+            dc = (LOW if delta > 0.02 else HIGH if delta < -0.02 else MID) if inv \
+                 else (HIGH if delta > 0.02 else LOW if delta < -0.02 else MID)
+            ds = f"+{delta:.2f}" if delta > 0 else f"{delta:.2f}"
             comp_rows.append(ft.Row([
                 ft.Text(f"{emoji} {label}", size=11, color=TEXT, expand=True),
-                ft.Container(content=ft.Text(f"{vc:.2f}", size=12, weight=ft.FontWeight.BOLD,
-                                             color=cc, text_align=ft.TextAlign.CENTER),
+                ft.Container(content=ft.Text(f"{vc:.2f}", size=12,
+                                             weight=ft.FontWeight.BOLD, color=cc,
+                                             text_align=ft.TextAlign.CENTER),
                              width=60, alignment=ft.alignment.Alignment(0, 0)),
                 ft.Container(content=ft.Text(f"{vm:.2f}", size=11, color=cm,
                                              text_align=ft.TextAlign.CENTER),
@@ -985,99 +1021,74 @@ MU.forEach(m=>{{
             border_radius=14, padding=14,
         )
 
-        perfil_col.controls = [
-            ft.Divider(color=BORDER, height=1),
-            ft.Container(height=4),
-            portada,
-            ft.Container(height=14),
-            titulo_seccion("VARIABLES — ANÁLISIS DETALLADO"),
-            ft.Container(height=8),
-            *vars_detalle,
-            *(
-                [titulo_seccion("ALERTAS METABÓLICAS"), ft.Container(height=6),
-                 *alertas_w, ft.Container(height=8)]
-                if alertas_w else []
-            ),
-            *(
-                [titulo_seccion("FACTORES PROTECTORES"), ft.Container(height=6),
-                 *fortalezas_w, ft.Container(height=8)]
-                if fortalezas_w else []
-            ),
-            titulo_seccion("COLONIA VS MUNICIPIO"),
-            ft.Container(height=8),
-            comparativa,
-            ft.Container(height=12),
-            titulo_seccion("RECOMENDACIONES TERRITORIALES"),
-            ft.Container(height=6),
-            *rec_w,
-            ft.Container(height=10),
+        # Header con botón atrás
+        header_perfil = ft.Container(
+            content=ft.Row([
+                ft.IconButton(
+                    ft.Icons.ARROW_BACK_IOS,
+                    icon_color=ACCENT,
+                    on_click=lambda e: render_selector(),
+                    icon_size=20,
+                ),
+                ft.Column([
+                    ft.Text("Perfil Metabólico", size=13,
+                            weight=ft.FontWeight.BOLD, color=TEXT),
+                    ft.Text(col["nombre"], size=10, color=MUTED),
+                ], spacing=1, expand=True),
+                ft.Text("🏙️", size=26),
+            ], spacing=4, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+            bgcolor=SURFACE,
+            padding=ft.padding.symmetric(horizontal=8, vertical=8),
+            border=ft.border.only(bottom=ft.BorderSide(1, BORDER)),
+        )
+
+        contenido.controls = [
+            header_perfil,
             ft.Container(
-                content=ft.Row([
-                    ft.Icon(ft.Icons.INFO_OUTLINE_ROUNDED, size=12, color=MUTED),
-                    ft.Text("INEGI Censo 2020 · CONAPO · DENUE · Datos estimados por colonia",
-                            size=9, color=MUTED, italic=True, expand=True),
-                ], spacing=6),
-                bgcolor=SURFACE, border_radius=8,
-                padding=ft.padding.symmetric(horizontal=10, vertical=6),
+                content=ft.Column([
+                    ft.Container(height=8),
+                    portada,
+                    ft.Container(height=14),
+                    titulo_seccion("VARIABLES — ANÁLISIS DETALLADO"),
+                    ft.Container(height=8),
+                    *vars_detalle,
+                    *(
+                        [titulo_seccion("ALERTAS METABÓLICAS"), ft.Container(height=6),
+                         *alertas_w, ft.Container(height=8)]
+                        if alertas_w else []
+                    ),
+                    *(
+                        [titulo_seccion("FACTORES PROTECTORES"), ft.Container(height=6),
+                         *fortalezas_w, ft.Container(height=8)]
+                        if fortalezas_w else []
+                    ),
+                    titulo_seccion("COLONIA VS MUNICIPIO"),
+                    ft.Container(height=8),
+                    comparativa,
+                    ft.Container(height=12),
+                    titulo_seccion("RECOMENDACIONES TERRITORIALES"),
+                    ft.Container(height=6),
+                    *rec_w,
+                    ft.Container(height=10),
+                    ft.Container(
+                        content=ft.Row([
+                            ft.Icon(ft.Icons.INFO_OUTLINE_ROUNDED, size=12, color=MUTED),
+                            ft.Text(
+                                "INEGI Censo 2020 · CONAPO · DENUE · Datos estimados por colonia",
+                                size=9, color=MUTED, italic=True, expand=True,
+                            ),
+                        ], spacing=6),
+                        bgcolor=SURFACE, border_radius=8,
+                        padding=ft.padding.symmetric(horizontal=10, vertical=6),
+                    ),
+                    ft.Container(height=32),
+                ], spacing=8),
+                padding=ft.padding.symmetric(horizontal=16, vertical=0),
             ),
         ]
-        perfil_col.visible = True
+        if update:
+            page.update()
 
-    def _seleccionar_colonia(col: dict):
-        col_estado["colonia"] = col
-        _rebuild_colonias()
-        _rebuild_perfil()
-        page.update()
-
-    # Inicializar lista de colonias
-    _rebuild_colonias()
-
-    # ── Layout final ──────────────────────────────────────────
-    return ft.Column([
-        perfil_header,
-        ft.Container(height=10),
-        ft.Container(
-            content=mapa_widget,
-            border=ft.border.all(1, BORDER),
-            border_radius=16,
-            clip_behavior=ft.ClipBehavior.HARD_EDGE,
-            shadow=ft.BoxShadow(blur_radius=6, color="#0000000a", offset=ft.Offset(0, 2)),
-        ),
-        ft.Container(height=6),
-        leyenda,
-        ft.Container(height=14),
-        titulo_seccion("COMPARATIVA RÁPIDA"),
-        ft.Container(height=6),
-        *_mini(),
-        ft.Container(height=14),
-        titulo_seccion("VARIABLES TERRITORIALES — INEGI / DENUE / CONAPO"),
-        ft.Container(height=8),
-        _var_card("🌳", "Acceso a Áreas Verdes", f"{av_m2} m²/hab",
-                  "OMS: 9 m²/hab", av_pct, av_col, "0 m²",
-                  f"OMS 9 m² {'✓' if av_pct >= 1 else '✗'}"),
-        _var_card("🏘️", "Densidad Poblacional", f"{dens:,}/km²".replace(",", "  "),
-                  "INEGI Censo 2020", dens_pct, dens_col, "Baja", "Alta"),
-        _var_card("📉", "Índice de Marginación", f"{marg:.2f}",
-                  "CONAPO", marg, marg_col, "Sin marginación", "Muy alto"),
-        _var_card("⚽", "Equipamiento Deportivo", f"{equip}/10k hab",
-                  "Instalaciones activas", equip_pct, equip_col, "0",
-                  f"Ideal: {datos_ter.get('equip_ideal', 6)}/10k"),
-        _var_card("🚶", "Movilidad Peatonal", f"{movil*100:.0f}%",
-                  "Banquetas en buen estado", movil, movil_col, "0%", "100%"),
-        _var_card("🍟", "Entorno Alimentario Riesgoso", f"{ultra*100:.0f}%",
-                  "Ultraprocesados/total DENUE", ultra, ultra_col, "Sin riesgo", "100%"),
-        # ── Sección colonias ──────────────────────────────────
-        ft.Container(height=4),
-        titulo_seccion("TU COLONIA — PERFIL METABÓLICO AMBIENTAL"),
-        ft.Container(height=4),
-        ft.Text("Toca una colonia para ver su análisis detallado",
-                size=11, color=MUTED),
-        ft.Container(height=8),
-        colonias_col,
-        perfil_col,
-        ft.Container(height=14),
-        titulo_seccion("RANKING MUNICIPAL"),
-        ft.Container(height=8),
-        *rank_rows,
-        ft.Container(height=28),
-    ], spacing=0, scroll=ft.ScrollMode.AUTO)
+    # Arrancar en selector
+    render_selector(update=False)
+    return ft.Column([contenido], expand=True, spacing=0, scroll=ft.ScrollMode.AUTO)
