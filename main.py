@@ -14,21 +14,18 @@ import numpy as np
 import threading
 import math
 # ═══════════════════════════════════════════════════════════
-#  PALETA DE COLORES — Tema claro, amigable, sin fatiga visual
+#  UI — Theme + Components (extraídos a módulos)
+#  F4 del refactor arquitectural — 2026-04-23
 # ═══════════════════════════════════════════════════════════
-BG       = "#f8fafb"      # Fondo principal blanco cálido
-SURFACE  = "#ffffff"      # Superficies blancas puras
-CARD     = "#ffffff"      # Tarjetas blancas con sombra suave
-BORDER   = "#e2e8f0"      # Bordes grises claros
-ACCENT   = "#0ea5e9"      # Azul cielo — acción principal
-ACCENT2  = "#f97316"      # Naranja suave — secundario
-ACCENT3  = "#8b5cf6"      # Violeta suave — gamificación
-LOW      = "#22c55e"      # Verde — bajo riesgo
-MID      = "#f59e0b"      # Ámbar — riesgo medio
-HIGH     = "#ef4444"      # Rojo — alto riesgo
-TEXT     = "#1e293b"      # Texto oscuro principal
-MUTED    = "#64748b"      # Texto secundario gris medio
-WHITE    = "#ffffff"
+from ui.theme import (
+    COLORES, PALETAS, get_paleta,
+    BG, SURFACE, CARD, BORDER, ACCENT, ACCENT2, ACCENT3,
+    LOW, MID, HIGH, TEXT, MUTED, WHITE,
+)
+from ui.components.tarjeta import tarjeta
+from ui.components.badge_riesgo import badge_riesgo
+from ui.components.barra_progreso import barra_progreso, progress_bar_row
+from ui.components.encuesta_widget import build_encuesta, titulo_seccion
 
 # ═══════════════════════════════════════════════════════════
 #  CORE — Lógica científica y datos (extraídos a módulos)
@@ -41,150 +38,8 @@ from core.datos import (
 )
 
 
-# ═══════════════════════════════════════════════════════════
-#  COMPONENTES UI REUTILIZABLES
-# ═══════════════════════════════════════════════════════════
-
-def tarjeta(content, padding=14, color=CARD, border=True):
-    return ft.Container(
-        content=content,
-        bgcolor=color,
-        border_radius=16,
-        padding=padding,
-        border=ft.border.all(1, BORDER) if border else None,
-        shadow=ft.BoxShadow(
-            spread_radius=0,
-            blur_radius=8,
-            color="#0000000d",
-            offset=ft.Offset(0, 2),
-        ),
-    )
-
-def titulo_seccion(texto):
-    return ft.Text(texto, size=11, weight=ft.FontWeight.BOLD,
-                   color="#94a3b8", font_family="monospace")
-def build_encuesta(page, on_complete): #cambio bb
-    respuestas = {}
-    paso_actual = [0]
-    contenido =ft.Column([],spacing=12, scroll =ft.ScrollMode.AUTO)
-    progreso_txt = ft.Text("",size=11, color=MUTED)
-    progreso_bar_inner = ft.Container(bgcolor=ACCENT, border_radius=4, height=4, width=0)
-    progreso_bar = ft.Container(
-        content = progreso_bar_inner,
-        bgcolor=BORDER, border_radius=4, height=4, expand=True, clip_behavior=ft.ClipBehavior.HARD_EDGE
-        
-    )
-    
-    def render_paso():
-        idx = paso_actual[0] 
-        total = len(ENCUESTA)
-        progreso_txt.value = f"Pregunta {idx+1} de {total}"
-        progreso_bar_inner.width = (idx / total) * 600 
-          
-        q = ENCUESTA[idx]
-        v = next( var for var in VARIABLES if var["key"] == q["variable"])
-        
-        botones = []
-        for op in q["opciones"]:
-            def make_click(valor, variable):
-                def on_click(e):
-                    respuestas[variable] = valor
-                    if paso_actual[0] < len(ENCUESTA) - 1:
-                        paso_actual[0] += 1
-                        render_paso()
-                    else:
-                        on_complete(respuestas)
-                return on_click
-            botones.append(
-                
-                ft.Container(
-                    content=ft.Row([
-                        ft.Container(
-                            content=ft.Text(v["icon"], size= 16),
-                            bgcolor=v["color"] + "22",
-                           border_radius=8 ,
-                            width=34, height=34 ,
-                            alignment=ft.alignment.Alignment(0, 0),
-                        ),
-                        ft.Text(op["texto"],size=13, color= TEXT, expand=True),
-                    ], spacing=10),
-                    bgcolor=CARD,
-                    border= ft.border.all(1, v["color"] + "55"),
-                    border_radius=12,
-                    padding= ft.padding.symmetric(horizontal=14, vertical=12),
-                    ink=True,
-                    on_click=make_click(op["valor"], q["variable"]),
-                )
-            )    
-        
-        contenido.controls = [
-            ft.Container(height=4),
-            ft.Row([
-            ft.Container(
-                content = ft.Text(v["icon"], size=22),
-                bgcolor = v["color"] + "22",
-                border_radius =12,
-                width=48,height=48,
-                alignment=ft.alignment.Alignment(0,0),
-            ),
-            ft.Column([
-                ft.Text(v["label"],size=12, color=v["color"],weight=ft.FontWeight.BOLD),
-                ft.Text(q["pregunta"], size=15, color=TEXT,weight=ft.FontWeight.W_600),
-                
-            ], spacing=2, expand=True),
-            ], spacing=12, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-            ft.Container(height=8),
-            *botones,
-        ]    
-        page.update() 
-    
-    render_paso()
-    
-    return ft.Column([
-        ft.Row([progreso_txt], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-        progreso_bar,
-        ft.Container(height=8),
-        contenido,
-    ], spacing=8, expand=True)
-                 
-                    
-def badge_riesgo(nivel, color):
-    return ft.Container(
-        content=ft.Row([
-            ft.Container(width=8, height=8, border_radius=4, bgcolor=color),
-            ft.Text(f"Riesgo {nivel}", size=12, weight=ft.FontWeight.BOLD, color=color),
-        ], spacing=6, tight=True),
-        bgcolor=color + "22",
-        border=ft.border.all(1, color + "55"),
-        border_radius=20,
-        padding=ft.padding.symmetric(horizontal=12, vertical=5),
-    )
-
-def barra_progreso(valor, color, height=5):
-    return ft.Stack([
-        ft.Container(height=height, border_radius=3, bgcolor=BORDER, expand=True),
-        ft.Container(
-            height=height, border_radius=3, bgcolor=color,
-            width=max(0, min(1, valor)) * 300,   # se ajusta con expand abajo
-        ),
-    ], expand=True)
-
-def progress_bar_row(valor, color, height=6):
-    """Barra de progreso que usa expand correctamente."""
-    return ft.Container(
-        content=ft.Container(
-            bgcolor=color,
-            border_radius=3,
-            height=height,
-            expand=False,
-        ),
-        bgcolor=BORDER,
-        border_radius=3,
-        height=height,
-        expand=True,
-        clip_behavior=ft.ClipBehavior.HARD_EDGE,
-        # Usamos overlay para simular el fill
-    )
+# (tarjeta, badge_riesgo, barra_progreso, progress_bar_row, build_encuesta,
+#  titulo_seccion → importados desde ui.components al inicio del archivo)
 
 
 # ═══════════════════════════════════════════════════════════
@@ -2706,29 +2561,13 @@ def build_educacion(page, state):
 #  PANTALLA 5 — PERFIL DE USUARIO
 # ═══════════════════════════════════════════════════════════
 
-# Paletas disponibles para el selector de tema
-PALETAS = {
-    "Claro (actual)": {
-        "BG": "#f8fafb", "SURFACE": "#ffffff", "CARD": "#ffffff",
-        "BORDER": "#e2e8f0", "TEXT": "#1e293b", "MUTED": "#64748b",
-        "ACCENT": "#0ea5e9", "modo": ft.ThemeMode.LIGHT,
-    },
-    "Oscuro (original)": {
-        "BG": "#0a0e1a", "SURFACE": "#111827", "CARD": "#161f35",
-        "BORDER": "#1e2d4a", "TEXT": "#e8edf5", "MUTED": "#6b7fa3",
-        "ACCENT": "#00e5c8", "modo": ft.ThemeMode.DARK,
-    },
-    "Verde salud": {
-        "BG": "#f0fdf4", "SURFACE": "#ffffff", "CARD": "#ffffff",
-        "BORDER": "#bbf7d0", "TEXT": "#14532d", "MUTED": "#4b7a5c",
-        "ACCENT": "#16a34a", "modo": ft.ThemeMode.LIGHT,
-    },
-}
+# PALETAS importado desde ui.theme al inicio del archivo.
 
 def _aplicar_paleta(nombre_paleta):
     """Cambia SOLO las variables globales de color. No toca la UI."""
+    import ui.theme as _theme
     global BG, SURFACE, CARD, BORDER, TEXT, MUTED, ACCENT
-    p = PALETAS[nombre_paleta]
+    p = _theme.get_paleta(nombre_paleta)
     BG      = p["BG"]
     SURFACE = p["SURFACE"]
     CARD    = p["CARD"]
