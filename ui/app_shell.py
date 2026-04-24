@@ -36,7 +36,8 @@ def main(page: ft.Page):
     _pantalla_login = None
     _auth_cerrar    = None
     try:
-        from auth import cargar_sesion, pantalla_login as _pl, cerrar_sesion as _ac
+        from data.auth_repository import cargar_sesion, cerrar_sesion as _ac
+        from ui.screens.login_screen import pantalla_login as _pl
         _usuario_activo = cargar_sesion()
         _pantalla_login = _pl
         _auth_cerrar    = _ac

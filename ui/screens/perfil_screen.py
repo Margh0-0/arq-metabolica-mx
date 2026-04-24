@@ -76,8 +76,8 @@ def build_perfil(page, state):
             page.update()
             return
         try:
-            import auth as _auth
-            sb  = _auth.supabase
+            from data.supabase_client import get_client as _get_client
+            sb  = _get_client()
             ses = sb.auth.get_session()
             if ses and ses.user:
                 uid    = ses.user.id

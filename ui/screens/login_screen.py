@@ -1,15 +1,12 @@
+"""
+ui/screens/login_screen.py — ARQ-Metabólica MX
+Pantallas de Login y Registro — extraídas de auth.py en F6 del refactor arquitectural.
+UI pura: no importa auth.py ni ningún módulo legacy.
+"""
+
 import flet as ft
-from config.settings import SUPABASE_URL, SUPABASE_KEY  # noqa: F401 — reexported for backwards compat
-from data.supabase_client import get_client  # noqa: F401
-from data.auth_repository import (
-    cargar_sesion,
-    guardar_sesion,
-    borrar_sesion,
-    obtener_usuario_actual,
-    cerrar_sesion,
-    iniciar_sesion,
-    registrar_usuario,
-)
+
+from data.auth_repository import iniciar_sesion, registrar_usuario
 
 VERDE_OSCURO  = "#1B5E20"
 VERDE_MEDIO   = "#2E7D32"
