@@ -248,6 +248,8 @@ def build_calculadora(page, state):
                     "nivel": nivel,
                     "prob":  pr,
                 }
+                # Flag para badge "Analista Territorial"
+                state["iarri_guardado"] = True
 
                 def cerrar_dialogo(e=None):
                     dlg.open = False

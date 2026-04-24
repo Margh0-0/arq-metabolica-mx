@@ -749,3 +749,264 @@ NIVELES_XP = [
     {"nivel": 4, "titulo": "Analista Urbano",    "xp_min": 450, "emoji": "🏙️"},
     {"nivel": 5, "titulo": "Experto IARRI",      "xp_min": 700, "emoji": "⭐"},
 ]
+
+# ─── RETOS SEMANALES ──────────────────────────────────────────────────────────
+# Cada reto tiene:
+#   id          str   — clave única en state (reto_{id}_completado, reto_{id}_progreso)
+#   categoria   str   — "movimiento" | "diseño" | "nutricion" | "educacion" | "territorio"
+#   emoji       str
+#   color       str   — hex
+#   titulo      str
+#   descripcion str   — qué hacer exactamente
+#   instruccion str   — texto de acción en la app
+#   meta        int   — cantidad objetivo (pasos, días, lecciones, etc.)
+#   unidad      str   — "pasos" | "días" | "lecciones" | "min" | "acciones"
+#   xp          int   — XP al completar
+#   badge_id    str | None  — badge que desbloquea al completar (o None)
+#   semana      int   — semana del ciclo (1-4, rotación mensual)
+
+RETOS_SEMANALES = [
+    # ── Semana 1 — Movimiento ──────────────────────────────
+    {
+        "id":          "camina_colonia",
+        "categoria":   "movimiento",
+        "emoji":       "🚶",
+        "color":       "#0ea5e9",
+        "titulo":      "Camina 5 000 pasos en tu colonia",
+        "descripcion": "Sal a caminar por tu colonia durante al menos 40 minutos. Observa las banquetas, áreas verdes y equipamiento deportivo cerca de tu casa.",
+        "instruccion": "Registra cada día que completaste tu caminata",
+        "meta":        5,
+        "unidad":      "días",
+        "xp":          80,
+        "badge_id":    "arquitecto_bioactivo",
+        "semana":      1,
+        "pasos": [
+            "Sal a caminar al menos 40 minutos",
+            "Recorre un área verde o parque de tu colonia",
+            "Identifica una banqueta en mal estado y fotográfiala",
+            "Nota cuántas tiendas de ultraprocesados hay en tu ruta",
+            "Comparte el recorrido con alguien de tu familia",
+        ],
+    },
+    {
+        "id":          "desayuno_real",
+        "categoria":   "nutricion",
+        "emoji":       "🥗",
+        "color":       "#22c55e",
+        "titulo":      "3 días sin ultraprocesados al desayuno",
+        "descripcion": "Reemplaza los cereales azucarados, pan dulce o galletas por frutas, avena o huevo durante 3 mañanas consecutivas.",
+        "instruccion": "Marca cada mañana que lo lograste",
+        "meta":        3,
+        "unidad":      "días",
+        "xp":          60,
+        "badge_id":    None,
+        "semana":      1,
+        "pasos": [
+            "Prepara avena con fruta el lunes",
+            "Huevo con verduras el miércoles",
+            "Fruta fresca con nueces el viernes",
+        ],
+    },
+
+    # ── Semana 2 — Diseño de espacio ──────────────────────
+    {
+        "id":          "redisena_estudio",
+        "categoria":   "diseño",
+        "emoji":       "🏛️",
+        "color":       "#8b5cf6",
+        "titulo":      "Rediseña tu espacio de estudio",
+        "descripcion": "Aplica 3 principios de arquitectura preventiva en tu área de trabajo o estudio: luz natural, ventilación y una planta o elemento verde.",
+        "instruccion": "Completa cada mejora y márcala",
+        "meta":        3,
+        "unidad":      "acciones",
+        "xp":          100,
+        "badge_id":    "disenador_preventivo",
+        "semana":      2,
+        "pasos": [
+            "Mueve tu escritorio cerca de una ventana con luz natural",
+            "Asegura ventilación cruzada: abre ventanas opuestas 10 min al día",
+            "Agrega una planta pequeña (suculenta, pothos o albahaca) a tu espacio",
+        ],
+    },
+    {
+        "id":          "mapea_colonia",
+        "categoria":   "territorio",
+        "emoji":       "🗺️",
+        "color":       "#f59e0b",
+        "titulo":      "Mapea los riesgos de tu colonia",
+        "descripcion": "Usa el módulo de Mapa para revisar el perfil territorial de tu colonia. Identifica las 2 variables con peor puntaje y piensa en una solución concreta.",
+        "instruccion": "Completa los pasos de análisis",
+        "meta":        3,
+        "unidad":      "acciones",
+        "xp":          70,
+        "badge_id":    None,
+        "semana":      2,
+        "pasos": [
+            "Abre el módulo Mapa y selecciona tu colonia",
+            "Identifica las 2 variables con ✗ Crítico",
+            "Escribe en papel una acción concreta para mejorar cada variable",
+        ],
+    },
+
+    # ── Semana 3 — Educación activa ───────────────────────
+    {
+        "id":          "completa_microcurso",
+        "categoria":   "educacion",
+        "emoji":       "🔬",
+        "color":       "#0ea5e9",
+        "titulo":      "Completa un microcurso completo",
+        "descripcion": "Termina todas las lecciones y la evaluación de cualquier microcurso en el módulo Educación.",
+        "instruccion": "Completa lecciones y evaluación",
+        "meta":        1,
+        "unidad":      "microcurso",
+        "xp":          120,
+        "badge_id":    "agente_metabolico",
+        "semana":      3,
+        "pasos": [
+            "Elige un microcurso en el módulo Aprender",
+            "Completa todas sus lecciones",
+            "Aprueba la evaluación final",
+        ],
+    },
+    {
+        "id":          "calcula_iarri",
+        "categoria":   "territorio",
+        "emoji":       "📊",
+        "color":       "#f97316",
+        "titulo":      "Calcula tu IARRI personal",
+        "descripcion": "Usa la Calculadora IARRI con tus valores reales y guarda el resultado. Compara con el promedio de tu municipio.",
+        "instruccion": "Guarda un cálculo en la Calculadora",
+        "meta":        1,
+        "unidad":      "cálculo",
+        "xp":          50,
+        "badge_id":    None,
+        "semana":      3,
+        "pasos": [
+            "Abre la Calculadora IARRI",
+            "Ajusta los sliders con tus valores reales",
+            "Guarda el resultado con el botón 'Guardar'",
+        ],
+    },
+
+    # ── Semana 4 — Reto integral ──────────────────────────
+    {
+        "id":          "semana_activa",
+        "categoria":   "movimiento",
+        "emoji":       "⚡",
+        "color":       "#ef4444",
+        "titulo":      "Semana activa — 7 días de movimiento",
+        "descripcion": "El reto más completo: combina caminata diaria, un día de ejercicio de fuerza y tres días sin ultraprocesados en una sola semana.",
+        "instruccion": "Registra cada día que cumpliste al menos uno de los criterios",
+        "meta":        7,
+        "unidad":      "días",
+        "xp":          200,
+        "badge_id":    "investigador_iarri",
+        "semana":      4,
+        "pasos": [
+            "Lunes: caminata 40 min",
+            "Martes: desayuno sin ultraprocesados",
+            "Miércoles: ejercicio de fuerza (sentadillas, lagartijas) 20 min",
+            "Jueves: caminata 40 min",
+            "Viernes: desayuno sin ultraprocesados",
+            "Sábado: recorre un parque o área verde con familia",
+            "Domingo: planea la semana siguiente con los módulos de la app",
+        ],
+    },
+]
+
+# ─── INSIGNIAS GAMIFICACIÓN ───────────────────────────────────────────────────
+# Sistema completo de insignias con condición de desbloqueo evaluable en runtime.
+#
+# condition_key  str  — qué clave del state se evalúa
+# condition_type str  — "bool" | "gte" | "any_mc" | "reto"
+#   "bool"    → state[condition_key] == True
+#   "gte"     → state[condition_key] >= condition_value
+#   "any_mc"  → any(state[f"mc_{mc_id}_evaluacion_completada"] for mc_id in condition_value)
+#   "reto"    → state[f"reto_{condition_key}_completado"] == True
+
+GAMIFICACION_BADGES = [
+    {
+        "id":          "arquitecto_bioactivo",
+        "emoji":       "🏛️",
+        "nombre":      "Arquitecto Bioactivo",
+        "descripcion": "Completaste el reto de caminata semanal. Conocés tu colonia y la recorrés activamente.",
+        "color":       "#0ea5e9",
+        "condition_type":  "reto",
+        "condition_key":   "camina_colonia",
+        "condition_value": None,
+        "xp_bonus":    50,
+        "categoria":   "movimiento",
+    },
+    {
+        "id":          "disenador_preventivo",
+        "emoji":       "🌱",
+        "nombre":      "Diseñador Preventivo",
+        "descripcion": "Aplicaste arquitectura preventiva en tu espacio. Tu entorno ahora trabaja a favor de tu salud.",
+        "color":       "#22c55e",
+        "condition_type":  "reto",
+        "condition_key":   "redisena_estudio",
+        "condition_value": None,
+        "xp_bonus":    60,
+        "categoria":   "diseño",
+    },
+    {
+        "id":          "agente_metabolico",
+        "emoji":       "⚡",
+        "nombre":      "Agente Metabólico",
+        "descripcion": "Completaste un microcurso completo. Tenés el conocimiento para actuar sobre tu entorno metabólico.",
+        "color":       "#8b5cf6",
+        "condition_type":  "reto",
+        "condition_key":   "completa_microcurso",
+        "condition_value": None,
+        "xp_bonus":    80,
+        "categoria":   "educacion",
+    },
+    {
+        "id":          "analista_territorial",
+        "emoji":       "📊",
+        "nombre":      "Analista Territorial",
+        "descripcion": "Guardaste tu cálculo IARRI personal. Ya mediste tu riesgo metabólico con datos reales.",
+        "color":       "#f97316",
+        "condition_type":  "bool",
+        "condition_key":   "iarri_guardado",
+        "condition_value": None,
+        "xp_bonus":    40,
+        "categoria":   "territorio",
+    },
+    {
+        "id":          "mapeador_urbano",
+        "emoji":       "🗺️",
+        "nombre":      "Mapeador Urbano",
+        "descripcion": "Completaste el reto territorial y conocés los riesgos de tu colonia.",
+        "color":       "#f59e0b",
+        "condition_type":  "reto",
+        "condition_key":   "mapea_colonia",
+        "condition_value": None,
+        "xp_bonus":    40,
+        "categoria":   "territorio",
+    },
+    {
+        "id":          "investigador_iarri",
+        "emoji":       "🔬",
+        "nombre":      "Investigador IARRI",
+        "descripcion": "Completaste la Semana Activa de 7 días. Sos un referente de salud metabólica preventiva.",
+        "color":       "#ef4444",
+        "condition_type":  "reto",
+        "condition_key":   "semana_activa",
+        "condition_value": None,
+        "xp_bonus":    120,
+        "categoria":   "movimiento",
+    },
+    {
+        "id":          "experto_educacion",
+        "emoji":       "🎓",
+        "nombre":      "Experto en Educación",
+        "descripcion": "Completaste todos los microcursos del módulo Educación.",
+        "color":       "#0ea5e9",
+        "condition_type":  "gte",
+        "condition_key":   "microcursos_completados",
+        "condition_value": 4,
+        "xp_bonus":    200,
+        "categoria":   "educacion",
+    },
+]
