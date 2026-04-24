@@ -10,6 +10,7 @@ Cruza 5 variables territoriales:
   · Movilidad peatonal
 
 Salida: "Perfil metabólico ambiental de tu colonia"
+Vista única con scroll — municipio + colonia + perfil en una sola pantalla.
 """
 
 import flet as ft
@@ -18,13 +19,12 @@ from ui.theme import (
     BG, SURFACE, CARD, BORDER, ACCENT, ACCENT2, ACCENT3,
     LOW, MID, HIGH, TEXT, MUTED, WHITE,
 )
-from ui.components.tarjeta import tarjeta
 from ui.components.encuesta_widget import titulo_seccion
 from core.iarri import calc_iarri, nivel_riesgo, prob_ri
 from core.datos import MUNICIPIOS, DATOS_TERRITORIALES
 
 
-# ─── HELPERS SEMÁNTICOS ──────────────────────────────────────────────────────
+# ─── HELPERS DE COLOR ────────────────────────────────────────────────────────
 
 def _color_var(valor: float, inversa: bool = True) -> str:
     """Inversa=True: valor alto es BUENO (áreas verdes, caminabilidad).
@@ -33,18 +33,10 @@ def _color_var(valor: float, inversa: bool = True) -> str:
     return LOW if riesgo < 0.33 else MID if riesgo < 0.66 else HIGH
 
 
+# ─── MOTOR DE DIAGNÓSTICO ────────────────────────────────────────────────────
+
 def _diagnostico_colonia(col: dict) -> dict:
-    """
-    Genera el diagnóstico narrativo completo de una colonia
-    cruzando las 5 variables. Retorna un dict con:
-    - nivel_general: "bajo" | "medio" | "alto" | "critico"
-    - color_general: hex
-    - titulo: frase de diagnóstico
-    - subtitulo: contexto breve
-    - alertas: lista de alertas específicas por variable
-    - fortalezas: lista de puntos positivos
-    - recomendaciones: lista de acciones concretas
-    """
+    """Cruza las 5 variables y genera diagnóstico narrativo completo."""
     av   = col.get("av", 0.5)
     ic   = col.get("ic", 0.5)
     ed   = col.get("ed", 0.5)
@@ -56,164 +48,133 @@ def _diagnostico_colonia(col: dict) -> dict:
     fortalezas = []
     recomendaciones = []
 
-    # ── Áreas verdes ──────────────────────────────────────────
     av_m2 = col.get("areas_verdes_m2", av * 9)
     if av_m2 < 3.0:
-        alertas.append({
-            "emoji": "🌳", "color": HIGH,
+        alertas.append({"emoji": "🌳", "color": HIGH,
             "texto": f"Áreas verdes críticas: {av_m2:.1f} m²/hab (OMS: 9 m²)",
-            "impacto": "Reduce actividad física espontánea hasta 40%",
-        })
+            "impacto": "Reduce actividad física espontánea hasta 40%"})
         recomendaciones.append("🌱 Exigir microparques o corredores verdes en la colonia")
     elif av_m2 < 6.0:
-        alertas.append({
-            "emoji": "🌳", "color": MID,
+        alertas.append({"emoji": "🌳", "color": MID,
             "texto": f"Áreas verdes insuficientes: {av_m2:.1f} m²/hab",
-            "impacto": "Por debajo del estándar OMS",
-        })
+            "impacto": "Por debajo del estándar OMS"})
         recomendaciones.append("🌳 Aprovechar áreas verdes existentes para actividad diaria")
     else:
         fortalezas.append(f"🌳 Buen acceso a áreas verdes: {av_m2:.1f} m²/hab")
 
-    # ── Movilidad peatonal ────────────────────────────────────
     movil = col.get("movilidad_peat", ic * 0.8)
     if movil < 0.30:
-        alertas.append({
-            "emoji": "🚶", "color": HIGH,
-            "texto": f"Movilidad peatonal muy deficiente: {movil*100:.0f}% banquetas accesibles",
-            "impacto": "El entorno disuade caminar como hábito diario",
-        })
+        alertas.append({"emoji": "🚶", "color": HIGH,
+            "texto": f"Movilidad peatonal muy deficiente: {movil*100:.0f}% accesible",
+            "impacto": "El entorno disuade caminar como hábito diario"})
         recomendaciones.append("🚶 Reportar banquetas en mal estado al municipio")
     elif movil < 0.55:
-        alertas.append({
-            "emoji": "🚶", "color": MID,
-            "texto": f"Movilidad peatonal limitada: {movil*100:.0f}% de banquetas en buen estado",
-            "impacto": "Reduce el ejercicio involuntario cotidiano",
-        })
+        alertas.append({"emoji": "🚶", "color": MID,
+            "texto": f"Movilidad peatonal limitada: {movil*100:.0f}% banquetas en buen estado",
+            "impacto": "Reduce el ejercicio involuntario cotidiano"})
     else:
         fortalezas.append(f"🚶 Buena infraestructura peatonal: {movil*100:.0f}% accesible")
 
-    # ── Equipamiento deportivo ────────────────────────────────
     equip = col.get("equipamiento_dep", ed * 6)
     if equip < 1.0:
-        alertas.append({
-            "emoji": "⚽", "color": HIGH,
+        alertas.append({"emoji": "⚽", "color": HIGH,
             "texto": f"Equipamiento deportivo casi nulo: {equip:.1f}/10k hab",
-            "impacto": "Sin infraestructura para actividad física estructurada",
-        })
+            "impacto": "Sin infraestructura para actividad física estructurada"})
         recomendaciones.append("⚽ Gestionar acceso a instalaciones deportivas públicas cercanas")
     elif equip < 3.0:
-        alertas.append({
-            "emoji": "⚽", "color": MID,
+        alertas.append({"emoji": "⚽", "color": MID,
             "texto": f"Equipamiento deportivo escaso: {equip:.1f}/10k hab (ideal: 6)",
-            "impacto": "Oferta insuficiente para cubrir la demanda poblacional",
-        })
+            "impacto": "Oferta insuficiente para cubrir la demanda poblacional"})
     else:
         fortalezas.append(f"⚽ Equipamiento deportivo aceptable: {equip:.1f}/10k hab")
 
-    # ── Entorno alimentario ───────────────────────────────────
     ultra = col.get("tiendas_ultra", ear)
     if ultra > 0.70:
-        alertas.append({
-            "emoji": "🍟", "color": HIGH,
+        alertas.append({"emoji": "🍟", "color": HIGH,
             "texto": f"Entorno alimentario muy riesgoso: {ultra*100:.0f}% ultraprocesados",
-            "impacto": "Alta exposición a alimentos que elevan glucosa e insulina",
-        })
-        recomendaciones.append("🥗 Buscar mercados tradicionales o OXXO de cereales/frutas como alternativa")
+            "impacto": "Alta exposición a alimentos que elevan glucosa e insulina"})
+        recomendaciones.append("🥗 Buscar mercados tradicionales como alternativa alimentaria")
     elif ultra > 0.45:
-        alertas.append({
-            "emoji": "🍟", "color": MID,
+        alertas.append({"emoji": "🍟", "color": MID,
             "texto": f"Entorno alimentario moderadamente riesgoso: {ultra*100:.0f}%",
-            "impacto": "Acceso fácil a ultraprocesados en la colonia",
-        })
+            "impacto": "Acceso fácil a ultraprocesados en la colonia"})
     else:
         fortalezas.append(f"🍟 Entorno alimentario aceptable: {ultra*100:.0f}% ultraprocesados")
 
-    # ── Marginación ───────────────────────────────────────────
     marg = col.get("marginacion", imp)
     grado = col.get("grado_marginacion", "—")
     if marg > 0.60:
-        alertas.append({
-            "emoji": "📉", "color": HIGH,
+        alertas.append({"emoji": "📉", "color": HIGH,
             "texto": f"Marginación {grado}: índice {marg:.2f}",
-            "impacto": "La vulnerabilidad socioeconómica amplifica todos los riesgos metabólicos",
-        })
+            "impacto": "La vulnerabilidad socioeconómica amplifica todos los riesgos"})
         recomendaciones.append("📋 Explorar programas de salud pública municipales disponibles")
     elif marg > 0.30:
-        alertas.append({
-            "emoji": "📉", "color": MID,
+        alertas.append({"emoji": "📉", "color": MID,
             "texto": f"Marginación {grado}: índice {marg:.2f}",
-            "impacto": "Acceso limitado a servicios de salud preventiva",
-        })
+            "impacto": "Acceso limitado a servicios de salud preventiva"})
     else:
         fortalezas.append(f"📉 Marginación {grado}: buen acceso a servicios")
 
-    # ── Densidad ──────────────────────────────────────────────
     dens = col.get("densidad_pob", 5000)
     if dens > 10_000:
-        alertas.append({
-            "emoji": "🏘️", "color": MID,
-            "texto": f"Alta densidad: {dens:,}/km² — comprime espacios verdes y deportivos".replace(",", " "),
-            "impacto": "Menor disponibilidad de espacios abiertos per cápita",
-        })
+        alertas.append({"emoji": "🏘️", "color": MID,
+            "texto": f"Alta densidad: {dens:,}/km²".replace(",", " "),
+            "impacto": "Menor disponibilidad de espacios abiertos per cápita"})
     else:
         fortalezas.append(f"🏘️ Densidad manejable: {dens:,}/km²".replace(",", " "))
 
-    # ── Nivel general ─────────────────────────────────────────
+    recomendaciones.append("📊 Usa la Calculadora IARRI para simular mejoras en tu entorno")
+
     if iarri >= 0.70:
-        nivel = "crítico"
-        color = HIGH
+        nivel, color = "crítico", HIGH
         titulo = "Entorno de Riesgo Metabólico Crítico"
-        subtitulo = "Tu colonia concentra múltiples factores que elevan el riesgo de resistencia a la insulina."
+        subtitulo = "Tu colonia concentra múltiples factores que elevan el riesgo de RI."
     elif iarri >= 0.50:
-        nivel = "alto"
-        color = HIGH
+        nivel, color = "alto", HIGH
         titulo = "Entorno de Riesgo Metabólico Alto"
-        subtitulo = "Varios factores del entorno construido dificultan mantener un metabolismo saludable."
+        subtitulo = "Varios factores del entorno dificultan mantener un metabolismo saludable."
     elif iarri >= 0.35:
-        nivel = "medio"
-        color = MID
+        nivel, color = "medio", MID
         titulo = "Entorno de Riesgo Metabólico Moderado"
-        subtitulo = "Algunas variables del entorno representan oportunidades de mejora."
+        subtitulo = "Algunas variables representan oportunidades de mejora."
     else:
-        nivel = "bajo"
-        color = LOW
+        nivel, color = "bajo", LOW
         titulo = "Entorno Metabólico Favorable"
         subtitulo = "Tu colonia cuenta con condiciones que facilitan un estilo de vida saludable."
 
-    # Recomendación universal
-    recomendaciones.append("📊 Usa la Calculadora IARRI para simular el impacto de mejoras en tu entorno")
-
     return {
-        "nivel": nivel,
-        "color": color,
-        "titulo": titulo,
-        "subtitulo": subtitulo,
-        "alertas": alertas,
-        "fortalezas": fortalezas,
+        "nivel": nivel, "color": color,
+        "titulo": titulo, "subtitulo": subtitulo,
+        "alertas": alertas, "fortalezas": fortalezas,
         "recomendaciones": recomendaciones,
-        "iarri": iarri,
-        "prob_ri": prob_ri(iarri),
+        "iarri": iarri, "prob_ri": prob_ri(iarri),
     }
 
 
-# ─── PANTALLA PRINCIPAL ───────────────────────────────────────────────────────
+# ─── PANTALLA PRINCIPAL — VISTA ÚNICA ────────────────────────────────────────
 
 def build_territorial(page: ft.Page, state: dict) -> ft.Column:
-    # Estado de navegación interna
-    nav = {"colonia": None, "municipio_idx": state.get("muni_idx", 0)}
 
-    contenido = ft.Column([], scroll=ft.ScrollMode.AUTO, expand=True)
+    # Estado reactivo
+    estado = {
+        "muni_idx": state.get("muni_idx", 0),
+        "colonia": None,          # dict colonia activa o None
+    }
 
-    # ─────────────────────────────────────────────────────────
-    # VISTA: SELECTOR DE MUNICIPIO + COLONIA
-    # ─────────────────────────────────────────────────────────
-    def render_selector(update: bool = True):
-        nav["colonia"] = None
-        muni_idx = nav["municipio_idx"]
+    # Área de perfil: visible=False hasta que se seleccione una colonia
+    perfil_col = ft.Column([], visible=False, spacing=8)
 
-        # Chips municipio
-        chips = ft.Row([
+    # Área de colonias: se reconstruye al cambiar municipio
+    colonias_col = ft.Column([], spacing=8)
+
+    # Resumen municipio: se actualiza al cambiar municipio
+    resumen_ref = ft.Ref[ft.Container]()
+
+    # ── Helpers de renderizado ────────────────────────────────
+
+    def _chips_muni() -> ft.Row:
+        muni_idx = estado["muni_idx"]
+        return ft.Row([
             ft.GestureDetector(
                 content=ft.Container(
                     content=ft.Text(
@@ -231,181 +192,126 @@ def build_territorial(page: ft.Page, state: dict) -> ft.Column:
             for i, m in enumerate(MUNICIPIOS)
         ], spacing=8, scroll=ft.ScrollMode.AUTO)
 
+    def _resumen_muni_content() -> ft.Column:
+        muni_idx = estado["muni_idx"]
         muni = MUNICIPIOS[muni_idx]
-        datos_muni = DATOS_TERRITORIALES.get(muni["nombre"], {})
-        colonias = datos_muni.get("colonias", [])
-        iarri_muni = calc_iarri(muni["AV"], muni["IC"], muni["ED"], muni["EAR"], muni["IMP"])
-        _, col_muni = nivel_riesgo(iarri_muni)
+        datos_m = DATOS_TERRITORIALES.get(muni["nombre"], {})
+        colonias = datos_m.get("colonias", [])
+        iarri_m = calc_iarri(muni["AV"], muni["IC"], muni["ED"], muni["EAR"], muni["IMP"])
+        _, col_m = nivel_riesgo(iarri_m)
+        pop = datos_m.get("poblacion", 0)
 
-        # Resumen del municipio
-        resumen_muni = ft.Container(
+        return ft.Column([
+            ft.Row([
+                ft.Column([
+                    ft.Text(muni["nombre"], size=16,
+                            weight=ft.FontWeight.W_900, color=TEXT),
+                    ft.Text(
+                        f"👥 {pop:,} hab · {len(colonias)} colonias".replace(",", " "),
+                        size=11, color=MUTED,
+                    ),
+                ], spacing=2, expand=True),
+                ft.Column([
+                    ft.Text(f"{iarri_m:.2f}", size=36,
+                            weight=ft.FontWeight.W_900, color=col_m),
+                    ft.Container(
+                        content=ft.Text("IARRI municipal", size=9,
+                                        color=col_m, weight=ft.FontWeight.BOLD),
+                        bgcolor=col_m + "18", border_radius=10,
+                        padding=ft.padding.symmetric(horizontal=8, vertical=3),
+                    ),
+                ], spacing=2, horizontal_alignment=ft.CrossAxisAlignment.END),
+            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+               vertical_alignment=ft.CrossAxisAlignment.END),
+            ft.Container(height=10),
+            ft.Column([
+                _mini_barra("🌳", "Áreas Verdes",     muni["AV"],  True),
+                _mini_barra("🚶", "Caminabilidad",     muni["IC"],  True),
+                _mini_barra("⚽", "Equip. Deportivo",  muni["ED"],  True),
+                _mini_barra("🍟", "Entorno Alim.",     muni["EAR"], False),
+                _mini_barra("📉", "Marginación",       muni["IMP"], False),
+            ], spacing=5),
+        ], spacing=0)
+
+    def _tarjeta_colonia(col: dict) -> ft.Container:
+        diag = _diagnostico_colonia(col)
+        activa = estado["colonia"] is not None and estado["colonia"]["nombre"] == col["nombre"]
+        return ft.Container(
             content=ft.Column([
                 ft.Row([
+                    ft.Container(
+                        content=ft.Text(
+                            "🔴" if diag["nivel"] in ("crítico", "alto")
+                            else "🟡" if diag["nivel"] == "medio" else "🟢",
+                            size=20,
+                        ),
+                        width=36, height=36,
+                        bgcolor=diag["color"] + "15",
+                        border_radius=10,
+                        alignment=ft.alignment.Alignment(0, 0),
+                    ),
                     ft.Column([
-                        ft.Text(muni["nombre"], size=16,
-                                weight=ft.FontWeight.W_900, color=TEXT),
+                        ft.Text(col["nombre"], size=13,
+                                weight=ft.FontWeight.BOLD, color=TEXT),
                         ft.Text(
-                            f"👥 {datos_muni.get('poblacion', 0):,} hab".replace(",", " ")
-                            + f"  ·  {len(colonias)} colonias",
-                            size=11, color=MUTED,
+                            f"👥 {col.get('poblacion', 0):,} hab".replace(",", " "),
+                            size=10, color=MUTED,
                         ),
-                    ], spacing=2, expand=True),
+                    ], spacing=1, expand=True),
                     ft.Column([
-                        ft.Text(f"{iarri_muni:.2f}", size=36,
-                                weight=ft.FontWeight.W_900, color=col_muni),
-                        ft.Container(
-                            content=ft.Text("IARRI municipal", size=9,
-                                            color=col_muni, weight=ft.FontWeight.BOLD),
-                            bgcolor=col_muni + "18",
-                            border_radius=10,
-                            padding=ft.padding.symmetric(horizontal=8, vertical=3),
-                        ),
-                    ], spacing=2, horizontal_alignment=ft.CrossAxisAlignment.END),
-                ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                   vertical_alignment=ft.CrossAxisAlignment.END),
-                ft.Container(height=10),
-                # Barra de las 5 variables municipales
-                ft.Column([
-                    _mini_barra("🌳", "Áreas Verdes", muni["AV"], True),
-                    _mini_barra("🚶", "Caminabilidad", muni["IC"], True),
-                    _mini_barra("⚽", "Equip. Deportivo", muni["ED"], True),
-                    _mini_barra("🍟", "Entorno Alim.", muni["EAR"], False),
-                    _mini_barra("📉", "Marginación", muni["IMP"], False),
-                ], spacing=5),
+                        ft.Text(f"{diag['iarri']:.2f}", size=20,
+                                weight=ft.FontWeight.W_900, color=diag["color"]),
+                        ft.Text(f"RI {diag['prob_ri']*100:.0f}%", size=10, color=MUTED),
+                    ], spacing=0, horizontal_alignment=ft.CrossAxisAlignment.END),
+                ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                ft.Container(height=6),
+                ft.Row([
+                    _chip_var("🌳", col.get("av", 0.5), True),
+                    _chip_var("🚶", col.get("ic", 0.5), True),
+                    _chip_var("⚽", col.get("ed", 0.5), True),
+                    _chip_var("🍟", col.get("ear", 0.5), False),
+                    _chip_var("📉", col.get("imp", 0.5), False),
+                ], spacing=4),
             ], spacing=0),
-            gradient=ft.LinearGradient(
-                begin=ft.alignment.Alignment(-1, -1),
-                end=ft.alignment.Alignment(1, 1),
-                colors=["#e0f2fe", "#ede9fe"],
+            bgcolor=CARD,
+            border=ft.border.all(
+                2 if activa else 1,
+                diag["color"] + "99" if activa else BORDER,
             ),
-            border=ft.border.all(1, BORDER),
-            border_radius=18,
-            padding=16,
+            border_radius=14,
+            padding=ft.padding.symmetric(horizontal=14, vertical=12),
+            ink=True,
+            on_click=lambda e, c=col: _seleccionar_colonia(c),
+            shadow=ft.BoxShadow(
+                blur_radius=8 if activa else 2,
+                color=diag["color"] + ("33" if activa else "0a"),
+                offset=ft.Offset(0, 2),
+            ),
         )
 
-        # Tarjetas de colonias
-        col_cards = []
-        for col in colonias:
-            diag = _diagnostico_colonia(col)
-            col_cards.append(
-                ft.Container(
-                    content=ft.Column([
-                        ft.Row([
-                            ft.Container(
-                                content=ft.Text(
-                                    "🔴" if diag["nivel"] in ("crítico", "alto")
-                                    else "🟡" if diag["nivel"] == "medio"
-                                    else "🟢",
-                                    size=20,
-                                ),
-                                width=36, height=36,
-                                bgcolor=diag["color"] + "15",
-                                border_radius=10,
-                                alignment=ft.alignment.Alignment(0, 0),
-                            ),
-                            ft.Column([
-                                ft.Text(col["nombre"], size=13,
-                                        weight=ft.FontWeight.BOLD, color=TEXT),
-                                ft.Text(
-                                    f"👥 {col.get('poblacion', 0):,} hab".replace(",", " "),
-                                    size=10, color=MUTED,
-                                ),
-                            ], spacing=1, expand=True),
-                            ft.Column([
-                                ft.Text(f"{diag['iarri']:.2f}", size=20,
-                                        weight=ft.FontWeight.W_900, color=diag["color"]),
-                                ft.Text(f"RI {diag['prob_ri']*100:.0f}%",
-                                        size=10, color=MUTED),
-                            ], spacing=0, horizontal_alignment=ft.CrossAxisAlignment.END),
-                        ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-                        ft.Container(height=6),
-                        # Mini barras de las 3 variables más críticas
-                        ft.Row([
-                            _chip_var("🌳", col.get("av", 0.5), True),
-                            _chip_var("🚶", col.get("ic", 0.5), True),
-                            _chip_var("⚽", col.get("ed", 0.5), True),
-                            _chip_var("🍟", col.get("ear", 0.5), False),
-                            _chip_var("📉", col.get("imp", 0.5), False),
-                        ], spacing=4),
-                    ], spacing=0),
-                    bgcolor=CARD,
-                    border=ft.border.all(2 if nav["colonia"] == col["nombre"] else 1,
-                                         diag["color"] + "88" if nav["colonia"] == col["nombre"]
-                                         else BORDER),
-                    border_radius=14,
-                    padding=ft.padding.symmetric(horizontal=14, vertical=12),
-                    ink=True,
-                    on_click=lambda e, c=col: render_perfil(c),
-                )
-            )
+    def _rebuild_colonias():
+        muni = MUNICIPIOS[estado["muni_idx"]]
+        datos_m = DATOS_TERRITORIALES.get(muni["nombre"], {})
+        colonias = datos_m.get("colonias", [])
+        colonias_col.controls = [_tarjeta_colonia(c) for c in colonias]
 
-        controles = [
-            # Header
-            ft.Container(
-                content=ft.Row([
-                    ft.Text("🏙️", size=26),
-                    ft.Column([
-                        ft.Text("Análisis Territorial", size=16,
-                                weight=ft.FontWeight.BOLD, color=ACCENT),
-                        ft.Text("Perfil metabólico ambiental · Datos INEGI / CONAPO / DENUE",
-                                size=11, color=MUTED),
-                    ], spacing=1),
-                ], spacing=10),
-                bgcolor=SURFACE,
-                padding=ft.padding.symmetric(horizontal=16, vertical=12),
-                border=ft.border.only(bottom=ft.BorderSide(1, BORDER)),
-            ),
-            ft.Container(
-                content=ft.Column([
-                    ft.Container(height=10),
-                    ft.Text("Selecciona un municipio", size=11,
-                            color=MUTED, weight=ft.FontWeight.W_600),
-                    ft.Container(height=4),
-                    chips,
-                    ft.Container(height=10),
-                    resumen_muni,
-                    ft.Container(height=14),
-                    ft.Divider(color=BORDER, height=1),
-                    ft.Container(height=8),
-                    ft.Text("Selecciona tu colonia", size=13,
-                            weight=ft.FontWeight.BOLD, color=TEXT),
-                    ft.Text("Toca una colonia para ver su perfil metabólico ambiental",
-                            size=11, color=MUTED),
-                    ft.Container(height=8),
-                    *col_cards,
-                    ft.Container(height=32),
-                ], spacing=8),
-                padding=ft.padding.symmetric(horizontal=16, vertical=0),
-            ),
-        ]
-        contenido.controls = controles
-        if update:
-            page.update()
+    def _rebuild_perfil():
+        col = estado["colonia"]
+        if col is None:
+            perfil_col.visible = False
+            perfil_col.controls = []
+            return
 
-    def _cambiar_muni(idx: int):
-        nav["municipio_idx"] = idx
-        state["muni_idx"] = idx
-        render_selector()
-
-    # ─────────────────────────────────────────────────────────
-    # VISTA: PERFIL METABÓLICO AMBIENTAL DE LA COLONIA
-    # ─────────────────────────────────────────────────────────
-    def render_perfil(col: dict, update: bool = True):
-        nav["colonia"] = col["nombre"]
+        muni = MUNICIPIOS[estado["muni_idx"]]
         diag = _diagnostico_colonia(col)
-        muni_idx = nav["municipio_idx"]
-        muni = MUNICIPIOS[muni_idx]
+        datos_m = DATOS_TERRITORIALES.get(muni["nombre"], {})
 
-        # ── PORTADA del perfil ────────────────────────────────
+        # ── Portada ──────────────────────────────────────────
         portada = ft.Container(
             content=ft.Column([
-                # Encabezado institucional
-                ft.Text(
-                    "PERFIL METABÓLICO AMBIENTAL",
-                    size=9, color=WHITE + "AA",
-                    weight=ft.FontWeight.BOLD,
-                    font_family="monospace",
-                ),
+                ft.Text("PERFIL METABÓLICO AMBIENTAL", size=9,
+                        color=WHITE + "AA", weight=ft.FontWeight.BOLD,
+                        font_family="monospace"),
                 ft.Container(height=4),
                 ft.Text(col["nombre"], size=20,
                         weight=ft.FontWeight.W_900, color=WHITE),
@@ -429,21 +335,16 @@ def build_territorial(page: ft.Page, state: dict) -> ft.Column:
                     ft.Container(expand=True),
                     ft.Column([
                         ft.Container(
-                            content=ft.Text(
-                                diag["nivel"].upper(),
-                                size=11, color=WHITE,
-                                weight=ft.FontWeight.BOLD,
-                            ),
+                            content=ft.Text(diag["nivel"].upper(), size=11,
+                                            color=WHITE, weight=ft.FontWeight.BOLD),
                             bgcolor=WHITE + "22",
                             border=ft.border.all(1, WHITE + "44"),
                             border_radius=8,
                             padding=ft.padding.symmetric(horizontal=10, vertical=5),
                         ),
                         ft.Container(height=4),
-                        ft.Text(
-                            f"👥 {col.get('poblacion', 0):,} hab".replace(",", " "),
-                            size=10, color=WHITE + "AA",
-                        ),
+                        ft.Text(f"👥 {col.get('poblacion', 0):,} hab".replace(",", " "),
+                                size=10, color=WHITE + "AA"),
                     ], spacing=0, horizontal_alignment=ft.CrossAxisAlignment.END),
                 ], spacing=16, vertical_alignment=ft.CrossAxisAlignment.CENTER),
                 ft.Container(height=8),
@@ -456,59 +357,61 @@ def build_territorial(page: ft.Page, state: dict) -> ft.Column:
                 end=ft.alignment.Alignment(1, 1),
                 colors=[diag["color"] + "DD", diag["color"] + "99"],
             ),
-            border_radius=18,
-            padding=18,
-            shadow=ft.BoxShadow(blur_radius=16, color=diag["color"] + "55",
+            border_radius=18, padding=18,
+            shadow=ft.BoxShadow(blur_radius=16,
+                                color=diag["color"] + "55",
                                 offset=ft.Offset(0, 4)),
         )
 
-        # ── Las 5 variables en detalle ────────────────────────
+        # ── 5 variables ───────────────────────────────────────
         vars_detalle = [
             _var_detalle(
                 "🌳", "Acceso a Áreas Verdes",
-                col.get("areas_verdes_m2", col.get("av", 0.5) * 9),
-                " m²/hab", col.get("av", 0.5), True,
-                "OMS: mínimo 9 m²/hab", f"Municipio: {DATOS_TERRITORIALES[muni['nombre']].get('areas_verdes_m2', 0)} m²",
+                col.get("areas_verdes_m2", col.get("av", 0.5) * 9), " m²/hab",
+                col.get("av", 0.5), True,
+                "OMS: mínimo 9 m²/hab",
+                f"Municipio: {datos_m.get('areas_verdes_m2', 0)} m²",
             ),
             _var_detalle(
                 "🏘️", "Densidad Poblacional",
-                col.get("densidad_pob", 5000),
-                " hab/km²", col.get("densidad_pob", 5000) / 12000, False,
-                "Umbral de estrés urbano: >10k/km²",
-                f"Municipio: {DATOS_TERRITORIALES[muni['nombre']].get('densidad_pob', 0):,}/km²".replace(",", " "),
+                col.get("densidad_pob", 5000), " hab/km²",
+                col.get("densidad_pob", 5000) / 12000, False,
+                "Umbral de estrés urbano: >10 000/km²",
+                f"Municipio: {datos_m.get('densidad_pob', 0):,}/km²".replace(",", " "),
             ),
             _var_detalle(
                 "📉", "Índice de Marginación",
                 col.get("marginacion", col.get("imp", 0.5)),
-                f" — {col.get('grado_marginacion', '—')}", col.get("marginacion", col.get("imp", 0.5)), False,
+                f" — {col.get('grado_marginacion', '—')}",
+                col.get("marginacion", col.get("imp", 0.5)), False,
                 "CONAPO · 0=Sin marginación / 1=Muy alto",
-                f"Municipio: {DATOS_TERRITORIALES[muni['nombre']].get('marginacion', 0):.2f}",
+                f"Municipio: {datos_m.get('marginacion', 0):.2f}",
             ),
             _var_detalle(
                 "⚽", "Equipamiento Deportivo",
-                col.get("equipamiento_dep", col.get("ed", 0.5) * 6),
-                "/10k hab", col.get("ed", 0.5), True,
+                col.get("equipamiento_dep", col.get("ed", 0.5) * 6), "/10k hab",
+                col.get("ed", 0.5), True,
                 "Ideal: 6 instalaciones/10k hab",
-                f"Municipio: {DATOS_TERRITORIALES[muni['nombre']].get('equipamiento_dep', 0)}/10k",
+                f"Municipio: {datos_m.get('equipamiento_dep', 0)}/10k",
             ),
             _var_detalle(
                 "🚶", "Movilidad Peatonal",
                 col.get("movilidad_peat", col.get("ic", 0.5) * 0.9) * 100,
-                "% banquetas accesibles", col.get("ic", 0.5), True,
-                "Meta: >60% de banquetas en buen estado",
-                f"Municipio: {DATOS_TERRITORIALES[muni['nombre']].get('movilidad_peat', 0)*100:.0f}%",
+                "% banquetas accesibles",
+                col.get("ic", 0.5), True,
+                "Meta: >60% banquetas en buen estado",
+                f"Municipio: {datos_m.get('movilidad_peat', 0)*100:.0f}%",
             ),
         ]
 
         # ── Alertas ───────────────────────────────────────────
-        alertas_widgets = []
-        for a in diag["alertas"]:
-            alertas_widgets.append(ft.Container(
+        alertas_w = [
+            ft.Container(
                 content=ft.Row([
                     ft.Container(
                         content=ft.Text(a["emoji"], size=18),
-                        bgcolor=a["color"] + "20",
-                        border_radius=8, width=36, height=36,
+                        bgcolor=a["color"] + "20", border_radius=8,
+                        width=36, height=36,
                         alignment=ft.alignment.Alignment(0, 0),
                     ),
                     ft.Column([
@@ -521,33 +424,34 @@ def build_territorial(page: ft.Page, state: dict) -> ft.Column:
                 border=ft.border.all(1, a["color"] + "44"),
                 border_radius=12,
                 padding=ft.padding.symmetric(horizontal=12, vertical=10),
-            ))
+            )
+            for a in diag["alertas"]
+        ]
 
         # ── Fortalezas ────────────────────────────────────────
-        fortalezas_widgets = []
-        for f in diag["fortalezas"]:
-            fortalezas_widgets.append(ft.Container(
+        fortalezas_w = [
+            ft.Container(
                 content=ft.Row([
-                    ft.Icon(ft.Icons.CHECK_CIRCLE_OUTLINE_ROUNDED,
-                            size=16, color=LOW),
+                    ft.Icon(ft.Icons.CHECK_CIRCLE_OUTLINE_ROUNDED, size=16, color=LOW),
                     ft.Text(f, size=12, color=TEXT, expand=True),
                 ], spacing=8),
                 bgcolor=LOW + "08",
                 border=ft.border.all(1, LOW + "33"),
                 border_radius=10,
                 padding=ft.padding.symmetric(horizontal=12, vertical=8),
-            ))
+            )
+            for f in diag["fortalezas"]
+        ]
 
         # ── Recomendaciones ───────────────────────────────────
-        rec_widgets = []
-        for idx_r, r in enumerate(diag["recomendaciones"]):
-            rec_widgets.append(ft.Container(
+        rec_w = [
+            ft.Container(
                 content=ft.Row([
                     ft.Container(
-                        content=ft.Text(str(idx_r + 1), size=11,
+                        content=ft.Text(str(i + 1), size=11,
                                         color=WHITE, weight=ft.FontWeight.BOLD),
-                        bgcolor=ACCENT,
-                        border_radius=20, width=24, height=24,
+                        bgcolor=ACCENT, border_radius=20,
+                        width=24, height=24,
                         alignment=ft.alignment.Alignment(0, 0),
                     ),
                     ft.Text(r, size=12, color=TEXT, expand=True),
@@ -556,13 +460,15 @@ def build_territorial(page: ft.Page, state: dict) -> ft.Column:
                 border=ft.border.all(1, ACCENT + "33"),
                 border_radius=10,
                 padding=ft.padding.symmetric(horizontal=12, vertical=8),
-            ))
+            )
+            for i, r in enumerate(diag["recomendaciones"])
+        ]
 
-        # ── Comparativa vs municipio ──────────────────────────
+        # ── Comparativa colonia vs municipio ──────────────────
         comparativa = _build_comparativa(col, muni)
 
-        # Fuente de datos
-        fuente_widget = ft.Container(
+        # ── Fuente ────────────────────────────────────────────
+        fuente = ft.Container(
             content=ft.Row([
                 ft.Icon(ft.Icons.INFO_OUTLINE_ROUNDED, size=12, color=MUTED),
                 ft.Text(
@@ -570,102 +476,141 @@ def build_territorial(page: ft.Page, state: dict) -> ft.Column:
                     size=9, color=MUTED, italic=True, expand=True,
                 ),
             ], spacing=6),
-            bgcolor=SURFACE,
-            border_radius=8,
+            bgcolor=SURFACE, border_radius=8,
             padding=ft.padding.symmetric(horizontal=10, vertical=6),
         )
 
-        controles = [
-            # Header con back
-            ft.Container(
-                content=ft.Row([
-                    ft.IconButton(
-                        ft.Icons.ARROW_BACK_IOS,
-                        icon_color=ACCENT,
-                        on_click=lambda e: render_selector(),
-                        icon_size=20,
-                    ),
-                    ft.Column([
-                        ft.Text("Perfil Metabólico", size=13,
-                                weight=ft.FontWeight.BOLD, color=TEXT),
-                        ft.Text(col["nombre"], size=10, color=MUTED),
-                    ], spacing=1, expand=True),
-                    ft.Text("🏙️", size=26),
-                ], spacing=4, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-                bgcolor=SURFACE,
-                padding=ft.padding.symmetric(horizontal=8, vertical=8),
-                border=ft.border.only(bottom=ft.BorderSide(1, BORDER)),
+        # ── Ensamblar perfil ──────────────────────────────────
+        perfil_col.controls = [
+            ft.Divider(color=BORDER, height=1),
+            ft.Container(height=4),
+            titulo_seccion("PERFIL METABÓLICO AMBIENTAL"),
+            ft.Container(height=8),
+            portada,
+            ft.Container(height=14),
+            titulo_seccion("VARIABLES TERRITORIALES — ANÁLISIS DETALLADO"),
+            ft.Container(height=8),
+            *vars_detalle,
+            *(
+                [titulo_seccion("ALERTAS METABÓLICAS"), ft.Container(height=6), *alertas_w,
+                 ft.Container(height=8)]
+                if alertas_w else []
             ),
-            ft.Container(
-                content=ft.Column([
-                    ft.Container(height=8),
-                    portada,
-                    ft.Container(height=14),
-                    titulo_seccion("VARIABLES TERRITORIALES — ANÁLISIS DETALLADO"),
-                    ft.Container(height=8),
-                    *vars_detalle,
-                    ft.Container(height=4),
-                    # Alertas
-                    *(
-                        [
-                            titulo_seccion("ALERTAS METABÓLICAS"),
-                            ft.Container(height=6),
-                            *alertas_widgets,
-                            ft.Container(height=8),
-                        ]
-                        if alertas_widgets else []
-                    ),
-                    # Fortalezas
-                    *(
-                        [
-                            titulo_seccion("FACTORES PROTECTORES"),
-                            ft.Container(height=6),
-                            *fortalezas_widgets,
-                            ft.Container(height=8),
-                        ]
-                        if fortalezas_widgets else []
-                    ),
-                    titulo_seccion("COMPARATIVA: COLONIA VS MUNICIPIO"),
-                    ft.Container(height=8),
-                    comparativa,
-                    ft.Container(height=12),
-                    titulo_seccion("RECOMENDACIONES TERRITORIALES"),
-                    ft.Container(height=6),
-                    *rec_widgets,
-                    ft.Container(height=10),
-                    fuente_widget,
-                    ft.Container(height=32),
-                ], spacing=8),
-                padding=ft.padding.symmetric(horizontal=16, vertical=0),
+            *(
+                [titulo_seccion("FACTORES PROTECTORES"), ft.Container(height=6), *fortalezas_w,
+                 ft.Container(height=8)]
+                if fortalezas_w else []
             ),
+            titulo_seccion("COMPARATIVA: COLONIA VS MUNICIPIO"),
+            ft.Container(height=8),
+            comparativa,
+            ft.Container(height=12),
+            titulo_seccion("RECOMENDACIONES TERRITORIALES"),
+            ft.Container(height=6),
+            *rec_w,
+            ft.Container(height=10),
+            fuente,
+            ft.Container(height=32),
         ]
-        contenido.controls = controles
-        if update:
-            page.update()
+        perfil_col.visible = True
 
-    # ─────────────────────────────────────────────────────────
-    # WIDGETS AUXILIARES
-    # ─────────────────────────────────────────────────────────
+    # ── Handlers de interacción ───────────────────────────────
 
-    render_selector(update=False)
-    return ft.Column([contenido], expand=True, spacing=0, scroll=ft.ScrollMode.AUTO)
+    def _cambiar_muni(idx: int):
+        estado["muni_idx"] = idx
+        state["muni_idx"] = idx
+        estado["colonia"] = None
+        # Reconstruir chips, resumen y colonias
+        chips_row.controls = _chips_muni().controls
+        resumen_container.content = _resumen_muni_content()
+        _rebuild_colonias()
+        perfil_col.visible = False
+        perfil_col.controls = []
+        page.update()
+
+    def _seleccionar_colonia(col: dict):
+        estado["colonia"] = col
+        # Actualizar borde de tarjetas (reconstruir lista)
+        _rebuild_colonias()
+        # Construir perfil inline
+        _rebuild_perfil()
+        page.update()
+
+    # ── Construir estructura fija ──────────────────────────────
+    chips_row = _chips_muni()
+    resumen_container = ft.Container(
+        content=_resumen_muni_content(),
+        gradient=ft.LinearGradient(
+            begin=ft.alignment.Alignment(-1, -1),
+            end=ft.alignment.Alignment(1, 1),
+            colors=["#e0f2fe", "#ede9fe"],
+        ),
+        border=ft.border.all(1, BORDER),
+        border_radius=18,
+        padding=16,
+    )
+    _rebuild_colonias()
+
+    contenido = ft.Column([
+        # ── Header fijo ───────────────────────────────────────
+        ft.Container(
+            content=ft.Row([
+                ft.Text("🏙️", size=26),
+                ft.Column([
+                    ft.Text("Análisis Territorial", size=16,
+                            weight=ft.FontWeight.BOLD, color=ACCENT),
+                    ft.Text("Perfil metabólico ambiental · INEGI / CONAPO / DENUE",
+                            size=11, color=MUTED),
+                ], spacing=1),
+            ], spacing=10),
+            bgcolor=SURFACE,
+            padding=ft.padding.symmetric(horizontal=16, vertical=12),
+            border=ft.border.only(bottom=ft.BorderSide(1, BORDER)),
+        ),
+        # ── Cuerpo con scroll ─────────────────────────────────
+        ft.Container(
+            content=ft.Column([
+                ft.Container(height=10),
+                # Selector de municipio
+                ft.Text("Municipio", size=11, color=MUTED, weight=ft.FontWeight.W_600),
+                ft.Container(height=4),
+                chips_row,
+                ft.Container(height=10),
+                # Resumen del municipio con mini-barras
+                resumen_container,
+                ft.Container(height=14),
+                ft.Divider(color=BORDER, height=1),
+                ft.Container(height=8),
+                # Lista de colonias
+                ft.Text("Selecciona tu colonia", size=13,
+                        weight=ft.FontWeight.BOLD, color=TEXT),
+                ft.Text("El perfil metabólico aparece aquí debajo al tocar una colonia",
+                        size=11, color=MUTED),
+                ft.Container(height=8),
+                colonias_col,
+                ft.Container(height=4),
+                # Perfil metabólico (inline, visible al seleccionar)
+                perfil_col,
+            ], spacing=8),
+            padding=ft.padding.symmetric(horizontal=16, vertical=0),
+            expand=True,
+        ),
+    ], spacing=0, expand=True, scroll=ft.ScrollMode.AUTO)
+
+    return contenido
 
 
-# ─── WIDGETS REUTILIZABLES (módulo-level) ────────────────────────────────────
+# ─── WIDGETS REUTILIZABLES ───────────────────────────────────────────────────
 
 def _mini_barra(emoji: str, label: str, valor: float, inversa: bool) -> ft.Row:
-    """Fila de mini-barra para el resumen del municipio."""
     col = _color_var(valor, inversa)
     return ft.Row([
         ft.Text(emoji, size=12),
         ft.Text(label, size=10, color=MUTED, width=100),
         ft.Container(
-            content=ft.Container(
-                width=max(2, valor * 160),
-                height=5, bgcolor=col, border_radius=2,
-            ),
-            width=160, height=5,
-            bgcolor=BORDER, border_radius=2,
+            content=ft.Container(width=max(2, valor * 160), height=5,
+                                 bgcolor=col, border_radius=2),
+            width=160, height=5, bgcolor=BORDER, border_radius=2,
             clip_behavior=ft.ClipBehavior.HARD_EDGE,
         ),
         ft.Text(f"{valor:.2f}", size=10, color=col,
@@ -674,7 +619,6 @@ def _mini_barra(emoji: str, label: str, valor: float, inversa: bool) -> ft.Row:
 
 
 def _chip_var(emoji: str, valor: float, inversa: bool) -> ft.Container:
-    """Chip compacto de variable para tarjeta de colonia."""
     col = _color_var(valor, inversa)
     return ft.Container(
         content=ft.Text(f"{emoji} {valor:.2f}", size=10,
@@ -692,10 +636,13 @@ def _var_detalle(
     pct: float, inversa: bool,
     nota_izq: str, nota_der: str,
 ) -> ft.Container:
-    """Tarjeta expandida de variable con barra, valor y notas."""
     col = _color_var(pct, inversa)
     pct_clip = max(0.0, min(1.0, pct))
-
+    valor_str = (
+        f"{valor_num:.1f}{unidad}"
+        if isinstance(valor_num, float)
+        else f"{valor_num:,}{unidad}".replace(",", " ")
+    )
     return ft.Container(
         content=ft.Column([
             ft.Row([
@@ -706,22 +653,15 @@ def _var_detalle(
                     alignment=ft.alignment.Alignment(0, 0),
                 ),
                 ft.Column([
-                    ft.Text(titulo, size=11,
-                            weight=ft.FontWeight.W_600, color=TEXT),
+                    ft.Text(titulo, size=11, weight=ft.FontWeight.W_600, color=TEXT),
                     ft.Text(nota_izq, size=10, color=MUTED),
                 ], spacing=1, expand=True),
-                ft.Text(
-                    f"{valor_num:.1f}{unidad}" if isinstance(valor_num, float)
-                    else f"{valor_num:,}{unidad}".replace(",", " "),
-                    size=16, weight=ft.FontWeight.W_900, color=col,
-                ),
+                ft.Text(valor_str, size=16, weight=ft.FontWeight.W_900, color=col),
             ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
             ft.Container(height=8),
             ft.Container(
-                content=ft.Container(
-                    bgcolor=col, border_radius=4, height=7,
-                    width=max(4, pct_clip * 300),
-                ),
+                content=ft.Container(bgcolor=col, border_radius=4, height=7,
+                                     width=max(4, pct_clip * 300)),
                 bgcolor=BORDER, border_radius=4, height=7,
                 expand=True, clip_behavior=ft.ClipBehavior.HARD_EDGE,
             ),
@@ -730,76 +670,63 @@ def _var_detalle(
                 ft.Container(expand=True),
                 ft.Container(
                     content=ft.Text(
-                        "✓ OK" if (col == LOW) else ("⚠ Atención" if col == MID else "✗ Crítico"),
+                        "✓ OK" if col == LOW else ("⚠ Atención" if col == MID else "✗ Crítico"),
                         size=9, color=WHITE, weight=ft.FontWeight.BOLD,
                     ),
-                    bgcolor=col,
-                    border_radius=8,
+                    bgcolor=col, border_radius=8,
                     padding=ft.padding.symmetric(horizontal=6, vertical=2),
                 ),
             ]),
         ], spacing=2),
         bgcolor=CARD,
         border=ft.border.all(1, col + "44"),
-        border_radius=14,
-        padding=14,
+        border_radius=14, padding=14,
         margin=ft.margin.only(bottom=8),
         shadow=ft.BoxShadow(blur_radius=4, color="#0000000a", offset=ft.Offset(0, 1)),
     )
 
 
 def _build_comparativa(col: dict, muni: dict) -> ft.Container:
-    """Tabla de comparativa colonia vs municipio para las 5 variables."""
-    datos_muni = DATOS_TERRITORIALES.get(muni["nombre"], {})
-
     filas = [
-        ("🌳", "Áreas Verdes",
-         col.get("av", 0.5), muni["AV"], True),
-        ("🚶", "Caminabilidad",
-         col.get("ic", 0.5), muni["IC"], True),
-        ("⚽", "Equip. Dep.",
-         col.get("ed", 0.5), muni["ED"], True),
-        ("🍟", "Entorno Alim.",
-         col.get("ear", 0.5), muni["EAR"], False),
-        ("📉", "Marginación",
-         col.get("imp", 0.5), muni["IMP"], False),
+        ("🌳", "Áreas Verdes",    col.get("av",  0.5), muni["AV"],  True),
+        ("🚶", "Caminabilidad",   col.get("ic",  0.5), muni["IC"],  True),
+        ("⚽", "Equip. Dep.",     col.get("ed",  0.5), muni["ED"],  True),
+        ("🍟", "Entorno Alim.",   col.get("ear", 0.5), muni["EAR"], False),
+        ("📉", "Marginación",     col.get("imp", 0.5), muni["IMP"], False),
     ]
-
     header = ft.Row([
-        ft.Text("Variable", size=10, color=MUTED, weight=ft.FontWeight.BOLD, expand=True),
-        ft.Text("Colonia", size=10, color=ACCENT, weight=ft.FontWeight.BOLD, width=60,
-                text_align=ft.TextAlign.CENTER),
-        ft.Text("Municipio", size=10, color=MUTED, weight=ft.FontWeight.BOLD, width=60,
-                text_align=ft.TextAlign.CENTER),
-        ft.Text("Δ", size=10, color=MUTED, weight=ft.FontWeight.BOLD, width=40,
-                text_align=ft.TextAlign.CENTER),
+        ft.Text("Variable",  size=10, color=MUTED,  weight=ft.FontWeight.BOLD, expand=True),
+        ft.Text("Colonia",   size=10, color=ACCENT, weight=ft.FontWeight.BOLD,
+                width=60, text_align=ft.TextAlign.CENTER),
+        ft.Text("Municipio", size=10, color=MUTED,  weight=ft.FontWeight.BOLD,
+                width=60, text_align=ft.TextAlign.CENTER),
+        ft.Text("Δ",         size=10, color=MUTED,  weight=ft.FontWeight.BOLD,
+                width=40, text_align=ft.TextAlign.CENTER),
     ], spacing=4)
 
     rows = [header, ft.Divider(color=BORDER, height=1)]
     for emoji, label, val_col, val_muni, inversa in filas:
         delta = val_col - val_muni
-        col_col = _color_var(val_col, inversa)
-        col_mun = _color_var(val_muni, inversa)
-        # Para inversas: delta positivo es MEJOR. Para directas: delta positivo es PEOR.
-        delta_col = (LOW if delta > 0.02 else HIGH if delta < -0.02 else MID) if inversa \
-                    else (HIGH if delta > 0.02 else LOW if delta < -0.02 else MID)
-        delta_str = f"+{delta:.2f}" if delta > 0 else f"{delta:.2f}"
-
+        c_col = _color_var(val_col,  inversa)
+        c_mun = _color_var(val_muni, inversa)
+        d_col = (LOW if delta > 0.02 else HIGH if delta < -0.02 else MID) if inversa \
+                else (HIGH if delta > 0.02 else LOW if delta < -0.02 else MID)
+        d_str = f"+{delta:.2f}" if delta > 0 else f"{delta:.2f}"
         rows.append(ft.Row([
             ft.Text(f"{emoji} {label}", size=11, color=TEXT, expand=True),
             ft.Container(
                 content=ft.Text(f"{val_col:.2f}", size=12,
-                                weight=ft.FontWeight.BOLD, color=col_col,
+                                weight=ft.FontWeight.BOLD, color=c_col,
                                 text_align=ft.TextAlign.CENTER),
                 width=60, alignment=ft.alignment.Alignment(0, 0),
             ),
             ft.Container(
-                content=ft.Text(f"{val_muni:.2f}", size=11, color=col_mun,
+                content=ft.Text(f"{val_muni:.2f}", size=11, color=c_mun,
                                 text_align=ft.TextAlign.CENTER),
                 width=60, alignment=ft.alignment.Alignment(0, 0),
             ),
             ft.Container(
-                content=ft.Text(delta_str, size=10, color=delta_col,
+                content=ft.Text(d_str, size=10, color=d_col,
                                 weight=ft.FontWeight.BOLD,
                                 text_align=ft.TextAlign.CENTER),
                 width=40, alignment=ft.alignment.Alignment(0, 0),
@@ -808,8 +735,6 @@ def _build_comparativa(col: dict, muni: dict) -> ft.Container:
 
     return ft.Container(
         content=ft.Column(rows, spacing=8),
-        bgcolor=CARD,
-        border=ft.border.all(1, BORDER),
-        border_radius=14,
-        padding=14,
+        bgcolor=CARD, border=ft.border.all(1, BORDER),
+        border_radius=14, padding=14,
     )
