@@ -210,40 +210,44 @@ DATOS_TERRITORIALES = {
 }
 
 # ─── ENCUESTA ─────────────────────────────────────────────────────────────────
+# NOTA: estas preguntas estiman la percepción personal del usuario sobre su entorno
+# y hábitos. Los valores resultantes alimentan las mismas variables del modelo IARRI
+# (AV, IC, ED, EAR) como proxy individual — NO reemplazan los datos INEGI/DENUE
+# del análisis territorial del mapa.
 ENCUESTA = [
     {
-        "variable": "AV",  # acceso a areas verdes
-        "pregunta": "¿Como consideras tu estilo de vida?",
+        "variable": "AV",  # proxy personal: percepción de acceso a espacios activos
+        "pregunta": "¿Cómo describirías el acceso a espacios verdes o para caminar en tu zona?",
         "opciones": [
-            {"texto": "Activo con servicios completos y lugares tranquilos para caminar.", "valor": 0.8},
-            {"texto": "Inactivo con servicios y problemas de salud(actualmente) sin poder salir a un lugar a caminar.", "valor": 0.2},
-            {"texto": "Prefiero no responder la pregunta", "valor": 0.5},
+            {"texto": "Tengo parques o áreas verdes cerca y los uso regularmente.", "valor": 0.8},
+            {"texto": "No tengo espacios cercanos o no puedo usarlos actualmente.", "valor": 0.2},
+            {"texto": "Prefiero no responder.", "valor": 0.5},
         ],
     },
     {
-        "variable": "IC",  # indice de caminabilidad
-        "pregunta": "¿Cuantas horas pasas al dia sentado?",
+        "variable": "IC",  # proxy personal: nivel de actividad física cotidiana
+        "pregunta": "¿Cuántas horas pasás al día sentado (trabajo, transporte, pantallas)?",
         "opciones": [
-            {"texto": "Menos de dos horas al dia",               "valor": 0.8},
-            {"texto": "Mas de seis horas al dia",                "valor": 0.2},
-            {"texto": "Menos de una hora o quince minutos al dia","valor": 0.9},
+            {"texto": "Menos de dos horas al día.",                "valor": 0.8},
+            {"texto": "Más de seis horas al día.",                 "valor": 0.2},
+            {"texto": "Menos de una hora al día.",                 "valor": 0.9},
         ],
     },
     {
-        "variable": "ED",  # entrenamiento deportivo
-        "pregunta": "¿Practica algun deporte, y soporta los sintomas del ritmo cardiaco elevado  que le produce?",
+        "variable": "ED",  # proxy personal: acceso y uso de infraestructura deportiva
+        "pregunta": "¿Practicás algún deporte o actividad física estructurada de forma regular?",
         "opciones": [
-            {"texto": "Si entreno de forma constante.", "valor": 0.85},
-            {"texto": "No practico ningun deporte.",    "valor": 0.1},
-            {"texto": "Puedo hacerlo media hora y ya.", "valor": 0.4},
+            {"texto": "Sí, entreno de forma constante.",       "valor": 0.85},
+            {"texto": "No practico ningún deporte.",           "valor": 0.1},
+            {"texto": "Hago algo de actividad pero muy poco.", "valor": 0.4},
         ],
     },
     {
-        "variable": "EAR",  # entorno alimentario riesgoso
-        "pregunta": "Con que frecuencia consume azucar como productos empaquetados.",
+        "variable": "EAR",  # proxy personal: exposición a ultraprocesados
+        "pregunta": "¿Con qué frecuencia consumís productos empaquetados con azúcar o ultraprocesados?",
         "opciones": [
-            {"texto": "Lo hago al menos una vez a la semana.", "valor": 0.7},
-            {"texto": "No consumo ese tipo de alimentos.",     "valor": 0.1},
+            {"texto": "Al menos una vez a la semana.", "valor": 0.7},
+            {"texto": "No consumo ese tipo de alimentos.", "valor": 0.1},
         ],
     },
 ]

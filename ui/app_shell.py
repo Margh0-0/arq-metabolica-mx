@@ -95,9 +95,9 @@ def main(page: ft.Page):
         )
 
     def refresh():
-        if state.get("tab") == 0:
-            content_area.content = build_screen(0)
-            page.update()
+        tab_actual = state.get("tab", 0)
+        content_area.content = build_screen(tab_actual)
+        page.update()
     state["refresh"] = refresh
 
     def abrir_test():

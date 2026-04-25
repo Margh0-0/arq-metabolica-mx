@@ -126,19 +126,19 @@ def _diagnostico_colonia(col: dict) -> dict:
 
     if iarri >= 0.70:
         nivel, color = "crítico", HIGH
-        titulo   = "Entorno de Riesgo Metabólico Crítico"
+        titulo    = "Entorno de Riesgo Metabólico Crítico"
         subtitulo = "Tu colonia concentra múltiples factores que elevan el riesgo de RI."
     elif iarri >= 0.50:
-        nivel, color = "alto", HIGH
-        titulo   = "Entorno de Riesgo Metabólico Alto"
+        nivel, color = "alto", MID      # ámbar — diferenciado de crítico (rojo)
+        titulo    = "Entorno de Riesgo Metabólico Alto"
         subtitulo = "Varios factores del entorno dificultan mantener un metabolismo saludable."
     elif iarri >= 0.35:
         nivel, color = "medio", MID
-        titulo   = "Entorno de Riesgo Metabólico Moderado"
+        titulo    = "Entorno de Riesgo Metabólico Moderado"
         subtitulo = "Algunas variables representan oportunidades de mejora."
     else:
         nivel, color = "bajo", LOW
-        titulo   = "Entorno Metabólico Favorable"
+        titulo    = "Entorno Metabólico Favorable"
         subtitulo = "Tu colonia cuenta con condiciones que facilitan un estilo de vida saludable."
 
     return {
@@ -155,9 +155,6 @@ def _diagnostico_colonia(col: dict) -> dict:
 def build_mapa(page, state):
     import json as _json
     import os as _os2
-
-    # Estado reactivo de colonia seleccionada
-    col_estado = {"colonia": None}
 
     muni_idx  = state.get("muni_idx", 0)
     muni_data = MUNICIPIOS[muni_idx]
@@ -255,7 +252,7 @@ def build_mapa(page, state):
         "San Andrés Cholula": [
             {"lat":19.0540,"lon":-98.3060,"tipo":"verde",   "titulo":"Parque Paseo Cholula",    "desc":"Área verde · AV +0.12"},
             {"lat":19.0490,"lon":-98.2980,"tipo":"verde",   "titulo":"Jardines de Zavaleta",     "desc":"Corredor verde · AV +0.08"},
-            {"lat":19.0514,"lon":-98.3020,"tipo":"deporte", "titulo":"Unidad Deportiva SAC",    "desc":"Canchas y gimnasio · ED +0.10"},
+            {"lat":19.0500,"lon":-98.3035,"tipo":"deporte", "titulo":"Unidad Deportiva SAC",    "desc":"Canchas y gimnasio · ED +0.10"},
             {"lat":19.0475,"lon":-98.3040,"tipo":"peatonal","titulo":"Zona Peatonal Centro",    "desc":"Caminabilidad alta · IC +0.15"},
             {"lat":19.0530,"lon":-98.2990,"tipo":"ultra",   "titulo":"Zona Comercial Galerías", "desc":"Ultraprocesados densos"},
         ],
@@ -305,60 +302,66 @@ def build_mapa(page, state):
                 _mlat, _mlon = _coords.get(_m["nombre"], (lat_c, lon_c))
                 _activo = _m["nombre"] == muni_nom
 
+                # Marker: width/height deben ser explícitos — default es 30x30 y recorta
+                _nombre_corto = " ".join(_m["nombre"].split()[:2])  # "San Andrés", "San Pablo", "Cuautlancingo"
                 _markers.append(_ftm.Marker(
                     coordinates=_ftm.MapLatitudeLongitude(_mlat, _mlon),
-                    content=ft.Tooltip(
-                        message=f"{_m['nombre']}\nIARRI: {_iv:.2f} — Riesgo {_nv}",
-                        content=ft.Container(
-                            content=ft.Column([
-                                ft.Text(_m["nombre"].split()[0], size=9,
-                                        color=WHITE, weight=ft.FontWeight.BOLD),
-                                ft.Text(f"{_iv:.2f}", size=13,
-                                        color=WHITE, weight=ft.FontWeight.W_900),
-                            ], spacing=0,
-                               horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-                            bgcolor=_cv,
-                            padding=ft.padding.symmetric(horizontal=8, vertical=5),
-                            border_radius=10,
-                            border=ft.border.all(2 if _activo else 0, WHITE),
-                            shadow=ft.BoxShadow(blur_radius=8, color="#00000066"),
-                        ),
+                    width=84,
+                    height=48,
+                    alignment=ft.alignment.Alignment(0, 0),
+                    content=ft.Container(
+                        content=ft.Column([
+                            ft.Text(_nombre_corto, size=9,
+                                    color=WHITE, weight=ft.FontWeight.BOLD,
+                                    text_align=ft.TextAlign.CENTER,
+                                    no_wrap=True),
+                            ft.Text(f"{_iv:.2f}", size=14,
+                                    color=WHITE, weight=ft.FontWeight.W_900,
+                                    text_align=ft.TextAlign.CENTER),
+                        ], spacing=0,
+                           horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+                        bgcolor=_cv,
+                        padding=ft.padding.symmetric(horizontal=8, vertical=5),
+                        border_radius=10,
+                        border=ft.border.all(2 if _activo else 0, WHITE),
+                        shadow=ft.BoxShadow(blur_radius=8, color="#00000066"),
+                        tooltip=f"{_m['nombre']}\nIARRI: {_iv:.2f} — Riesgo {_nv}",
+                        width=84,
+                        height=48,
+                        alignment=ft.alignment.Alignment(0, 0),
                     ),
                 ))
 
+                # CircleMarker: color = borde, opacity en el propio control
                 _circles.append(_ftm.CircleMarker(
                     coordinates=_ftm.MapLatitudeLongitude(_mlat, _mlon),
                     radius=700 + _iv * 1800,
                     use_radius_in_meter=True,
-                    color=_cv, fill_color=_cv,
-                    fill_opacity=0.15,
-                    border_stroke_width=2,
+                    color=_cv,
                     border_color=_cv,
+                    border_stroke_width=2,
+                    opacity=0.15,
                 ))
 
             for _poi in _pois.get(muni_nom, []):
                 _t = _tipos_poi.get(_poi["tipo"], {"color": "#888", "emoji": "📍"})
                 _markers.append(_ftm.Marker(
                     coordinates=_ftm.MapLatitudeLongitude(_poi["lat"], _poi["lon"]),
-                    content=ft.Tooltip(
-                        message=f"{_poi['titulo']}\n{_poi['desc']}",
-                        content=ft.Container(
-                            content=ft.Text(_t["emoji"], size=16),
-                            bgcolor=_t["color"] + "DD",
-                            width=30, height=30,
-                            border_radius=15,
-                            alignment=ft.alignment.Alignment(0, 0),
-                            border=ft.border.all(1, WHITE),
-                        ),
+                    content=ft.Container(
+                        content=ft.Text(_t["emoji"], size=16),
+                        bgcolor=_t["color"] + "DD",
+                        width=30, height=30,
+                        border_radius=15,
+                        alignment=ft.alignment.Alignment(0, 0),
+                        border=ft.border.all(1, WHITE),
+                        tooltip=f"{_poi['titulo']}\n{_poi['desc']}",
                     ),
                 ))
 
             mapa_widget = ft.Column([
                 _ftm.Map(
-                    height=300,
-                    initial_center=_ftm.MapLatitudeLongitude(lat_c, lon_c),
-                    initial_zoom=12.5,
-                    layers=[
+                    # layers es primer argumento posicional en 0.84
+                    [
                         _ftm.TileLayer(
                             url_template="https://tile.openstreetmap.org/{z}/{x}/{y}.png",
                             user_agent_package_name="arq_metabolica_mx",
@@ -366,11 +369,14 @@ def build_mapa(page, state):
                         _ftm.CircleLayer(circles=_circles),
                         _ftm.MarkerLayer(markers=_markers),
                     ],
+                    initial_center=_ftm.MapLatitudeLongitude(lat_c, lon_c),
+                    initial_zoom=12.5,
+                    height=300,
                 ),
                 ft.Container(
                     content=ft.Row([
                         ft.Icon(ft.Icons.MAP_ROUNDED, size=13, color=MUTED),
-                        ft.Text("OpenStreetMap · toca un marcador para ver datos",
+                        ft.Text("OpenStreetMap · tocá un marcador para ver datos",
                                 size=10, color=MUTED, italic=True),
                         ft.Container(expand=True),
                         ft.Text("OSM Contributors", size=9, color=MUTED, italic=True),
@@ -474,9 +480,15 @@ MU.forEach(m=>{{
   d.onclick=()=>map.flyTo([m.lat,m.lon],14,{{duration:1}});lm.appendChild(d);}});
 </script></body></html>"""
 
-        _ruta = _os2.path.abspath("mapa_arq.html")
-        with open(_ruta, "w", encoding="utf-8") as _fh:
-            _fh.write(_html)
+        import tempfile as _tmp
+        _tf = _tmp.NamedTemporaryFile(
+            mode="w", suffix=".html", encoding="utf-8",
+            delete=False, prefix="mapa_arq_",
+        )
+        _tf.write(_html)
+        _tf.flush()
+        _ruta = _tf.name
+        _tf.close()
 
         import webbrowser as _wb
         def _abrir(e=None):
@@ -530,17 +542,25 @@ MU.forEach(m=>{{
             )
 
     # ── Leyenda ───────────────────────────────────────────────
-    leyenda = ft.Row([
-        ft.Row([ft.Container(width=8, height=8, border_radius=4, bgcolor=LOW),
-                ft.Text("Bajo", size=10, color=MUTED)], spacing=4),
-        ft.Row([ft.Container(width=8, height=8, border_radius=4, bgcolor=MID),
-                ft.Text("Medio", size=10, color=MUTED)], spacing=4),
-        ft.Row([ft.Container(width=8, height=8, border_radius=4, bgcolor=HIGH),
-                ft.Text("Alto", size=10, color=MUTED)], spacing=4),
-        ft.Row([ft.Text("🌳", size=11), ft.Text("🚶", size=11),
-                ft.Text("⚽", size=11), ft.Text("🍟", size=11)]),
-        ft.Text("OSM · INEGI 2020", size=9, color=MUTED, italic=True),
-    ], spacing=10, wrap=True)
+    leyenda = ft.Column([
+        # Niveles de riesgo IARRI
+        ft.Row([
+            ft.Row([ft.Container(width=8, height=8, border_radius=4, bgcolor=LOW),
+                    ft.Text("Riesgo bajo", size=10, color=MUTED)], spacing=4),
+            ft.Row([ft.Container(width=8, height=8, border_radius=4, bgcolor=MID),
+                    ft.Text("Moderado", size=10, color=MUTED)], spacing=4),
+            ft.Row([ft.Container(width=8, height=8, border_radius=4, bgcolor=HIGH),
+                    ft.Text("Alto / Crítico", size=10, color=MUTED)], spacing=4),
+        ], spacing=12, wrap=True),
+        # POIs del mapa
+        ft.Row([
+            ft.Row([ft.Text("🌳", size=11), ft.Text("Área verde", size=10, color=MUTED)], spacing=3),
+            ft.Row([ft.Text("🚶", size=11), ft.Text("Peatonal", size=10, color=MUTED)], spacing=3),
+            ft.Row([ft.Text("⚽", size=11), ft.Text("Deporte", size=10, color=MUTED)], spacing=3),
+            ft.Row([ft.Text("🍟", size=11), ft.Text("Ultraprocesados", size=10, color=MUTED)], spacing=3),
+        ], spacing=10, wrap=True),
+        ft.Text("Fuente: OSM · INEGI 2020", size=9, color=MUTED, italic=True),
+    ], spacing=6)
 
     # ── Comparativa rápida municipal ──────────────────────────
     def _mini():
@@ -562,22 +582,32 @@ MU.forEach(m=>{{
                         border_radius=10, padding=8, width=70,
                     ),
                     ft.Column([
+                        ft.Text("riesgo →", size=8, color=MUTED, italic=True),
                         *[ft.Row([
                             ft.Text(_ico, size=10),
+                            # Barra responsive: expand proporcional al riesgo [0-1]
+                            # _fill = partes de color, _empty = partes vacías (total=100)
                             ft.Container(
-                                content=ft.Container(bgcolor=_vc, border_radius=2,
-                                                     height=5, width=_vv * 130),
+                                content=ft.Row([
+                                    ft.Container(bgcolor=_vc, border_radius=2,
+                                                 height=5, expand=max(1, int(_riesgo * 100))),
+                                    ft.Container(bgcolor=ft.Colors.TRANSPARENT,
+                                                 height=5,
+                                                 expand=max(1, 100 - int(_riesgo * 100))),
+                                ], spacing=0, expand=True),
                                 bgcolor=BORDER, border_radius=2, height=5,
-                                width=130, clip_behavior=ft.ClipBehavior.HARD_EDGE,
+                                expand=True, clip_behavior=ft.ClipBehavior.HARD_EDGE,
+                                padding=0,
                             ),
-                            ft.Text(f"{_vv:.2f}", size=9, color=_vc,
+                            ft.Text(f"{_riesgo:.2f}", size=9, color=_vc,
                                     width=26, text_align=ft.TextAlign.RIGHT),
                         ], spacing=4)
                         for _ico, _key, _inv in [("🌳", "AV", True), ("🚶", "IC", True),
                                                   ("⚽", "ED", True), ("🍟", "EAR", False)]
                         for _vv in [_m[_key]]
-                        for _vc in [LOW if (_vv if not _inv else 1 - _vv) < 0.33
-                                    else MID if (_vv if not _inv else 1 - _vv) < 0.66
+                        for _riesgo in [(1 - _vv) if _inv else _vv]
+                        for _vc in [LOW if _riesgo < 0.33
+                                    else MID if _riesgo < 0.66
                                     else HIGH]
                         ],
                     ], spacing=3, expand=True),
@@ -603,10 +633,16 @@ MU.forEach(m=>{{
                 ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
                 ft.Container(height=8),
                 ft.Container(
-                    content=ft.Container(bgcolor=color, border_radius=4, height=7,
-                                         width=max(4, min(1.0, pct)) * 300),
+                    content=ft.Row([
+                        ft.Container(bgcolor=color, border_radius=4,
+                                     height=7, expand=max(1, int(min(1.0, pct) * 100))),
+                        ft.Container(bgcolor=ft.Colors.TRANSPARENT,
+                                     height=7,
+                                     expand=max(1, 100 - int(min(1.0, pct) * 100))),
+                    ], spacing=0, expand=True),
                     bgcolor=BORDER, border_radius=4, height=7,
                     expand=True, clip_behavior=ft.ClipBehavior.HARD_EDGE,
+                    padding=0,
                 ),
                 ft.Row([ft.Text(nota_izq, size=9, color=MUTED),
                         ft.Container(expand=True),
@@ -647,11 +683,17 @@ MU.forEach(m=>{{
                 ft.Column([
                     ft.Text(_m["nombre"], size=12, weight=ft.FontWeight.W_600, color=TEXT),
                     ft.Container(
-                        content=ft.Container(bgcolor=_cv, border_radius=3, height=5,
-                                             width=_m["iarri"] * 200),
+                        content=ft.Row([
+                            ft.Container(bgcolor=_cv, border_radius=3,
+                                         height=5, expand=max(1, int(_m["iarri"] * 100))),
+                            ft.Container(bgcolor=ft.Colors.TRANSPARENT,
+                                         height=5,
+                                         expand=max(1, 100 - int(_m["iarri"] * 100))),
+                        ], spacing=0, expand=True),
                         bgcolor=BORDER, border_radius=3, height=5,
                         expand=True, clip_behavior=ft.ClipBehavior.HARD_EDGE,
                         margin=ft.margin.only(top=4),
+                        padding=0,
                     ),
                 ], spacing=2, expand=True),
                 ft.Column([
@@ -675,10 +717,11 @@ MU.forEach(m=>{{
     contenido  = ft.Column([], scroll=ft.ScrollMode.AUTO, expand=True)
 
     # ── Helpers de colonia ────────────────────────────────────
-    def _chip_var(emoji: str, valor: float, inversa: bool) -> ft.Container:
+    def _chip_var(emoji: str, valor: float, inversa: bool, unidad: str = "") -> ft.Container:
         c = _color_var(valor, inversa)
+        label = f"{valor*100:.0f}{unidad}" if unidad == "%" else f"{valor:.2f}{unidad}"
         return ft.Container(
-            content=ft.Text(f"{emoji} {valor:.2f}", size=10,
+            content=ft.Text(f"{emoji} {label}", size=10,
                             color=c, weight=ft.FontWeight.BOLD),
             bgcolor=c + "15",
             border=ft.border.all(1, c + "44"),
@@ -718,11 +761,11 @@ MU.forEach(m=>{{
                 ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
                 ft.Container(height=6),
                 ft.Row([
-                    _chip_var("🌳", col.get("av",  0.5), True),
-                    _chip_var("🚶", col.get("ic",  0.5), True),
-                    _chip_var("⚽", col.get("ed",  0.5), True),
-                    _chip_var("🍟", col.get("ear", 0.5), False),
-                    _chip_var("📉", col.get("imp", 0.5), False),
+                    _chip_var("🌳", col.get("av",  0.5), True,  "%"),  # % cobertura verde
+                    _chip_var("🚶", col.get("ic",  0.5), True,  "%"),  # % caminabilidad
+                    _chip_var("⚽", col.get("ed",  0.5), True,  "%"),  # % equip. deportivo
+                    _chip_var("🍟", col.get("ear", 0.5), False, "%"),  # % ultraprocesados
+                    _chip_var("📉", col.get("imp", 0.5), False, ""),   # índice [0-1]
                 ], spacing=4),
             ], spacing=0),
             bgcolor=CARD,
@@ -780,6 +823,19 @@ MU.forEach(m=>{{
             titulo_seccion("RANKING MUNICIPAL"),
             ft.Container(height=8),
             *rank_rows,
+            ft.Container(
+                content=ft.Row([
+                    ft.Icon(ft.Icons.INFO_OUTLINE_ROUNDED, size=12, color=MUTED),
+                    ft.Text(
+                        "Prob RI es una estimación poblacional del entorno construido "
+                        "(modelo IARRI-MX). No es un diagnóstico médico individual.",
+                        size=9, color=MUTED, italic=True, expand=True,
+                    ),
+                ], spacing=6),
+                bgcolor=SURFACE,
+                border_radius=8,
+                padding=ft.padding.symmetric(horizontal=10, vertical=6),
+            ),
             ft.Container(height=28),
         ]
         if update:
@@ -866,10 +922,16 @@ MU.forEach(m=>{{
                     ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
                     ft.Container(height=8),
                     ft.Container(
-                        content=ft.Container(bgcolor=c, border_radius=4, height=7,
-                                             width=max(4, p_clip * 300)),
+                        content=ft.Row([
+                            ft.Container(bgcolor=c, border_radius=4,
+                                         height=7, expand=max(1, int(p_clip * 100))),
+                            ft.Container(bgcolor=ft.Colors.TRANSPARENT,
+                                         height=7,
+                                         expand=max(1, 100 - int(p_clip * 100))),
+                        ], spacing=0, expand=True),
                         bgcolor=BORDER, border_radius=4, height=7,
                         expand=True, clip_behavior=ft.ClipBehavior.HARD_EDGE,
+                        padding=0,
                     ),
                     ft.Row([
                         ft.Text(n_der, size=9, color=MUTED),
