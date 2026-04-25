@@ -22,7 +22,7 @@ from ui.components.tarjeta import tarjeta
 from ui.components.encuesta_widget import titulo_seccion
 from core.iarri import calc_iarri, nivel_riesgo, prob_ri
 from core.iarm import nivel_riesgo_iarm, narrativa_combinada
-from core.datos import MUNICIPIOS, RECOMENDACIONES
+from core.datos import MUNICIPIOS, RECOMENDACIONES, ARQ_PREVENTIVA
 
 
 # ─── Helper: hex color + opacidad ────────────────────────────────────────────
@@ -141,6 +141,178 @@ def _calcular_simulacion(municipio: dict) -> dict:
         "prob_despues":  prob_d,
         "reduccion_pct": reduccion,
     }
+
+
+# ─── Módulo: Arquitectura Preventiva ─────────────────────────────────────────
+
+# Colores de categoría para el chip de la card
+_CATEGORIA_COLOR = {
+    "movimiento": ACCENT,
+    "diseño":     ACCENT3,
+    "nutricion":  LOW,
+}
+_CATEGORIA_LABEL = {
+    "movimiento": "Movimiento",
+    "diseño":     "Diseño",
+    "nutricion":  "Nutrición",
+}
+
+
+def _build_arq_preventiva(page) -> ft.Column:
+    """
+    Sección 'Arquitectura Preventiva' — 5 cards expandibles con recomendaciones
+    personalizadas basadas en principios OMS de entorno saludable.
+
+    Cada card muestra: icono + título + subtítulo + chip de categoría.
+    Al expandir: descripción, pasos accionables, referencia OMS e impacto estimado.
+    """
+
+    cards = []
+
+    for item in ARQ_PREVENTIVA:
+        col        = item["color"]
+        cat_col:   str = _CATEGORIA_COLOR.get(item["categoria"], MUTED)
+        cat_label: str = _CATEGORIA_LABEL.get(item["categoria"]) or item["categoria"].capitalize()
+
+        # Cuerpo expandible (oculto por defecto)
+        body = ft.Container(
+            content=ft.Column([
+                # Descripción
+                ft.Text(item["descripcion"], size=12, color=MUTED),
+                ft.Container(height=8),
+                # Pasos accionables
+                ft.Text(
+                    "¿Cómo empezar?",
+                    size=11,
+                    weight=ft.FontWeight.BOLD,
+                    color=TEXT,
+                ),
+                ft.Container(height=4),
+                ft.Column(
+                    [
+                        ft.Row([
+                            ft.Container(
+                                content=ft.Text(str(i + 1), size=10, color=WHITE,
+                                               weight=ft.FontWeight.BOLD),
+                                bgcolor=col,
+                                border_radius=100,
+                                width=20, height=20,
+                                alignment=ft.alignment.Alignment(0, 0),
+                            ),
+                            ft.Text(paso, size=12, color=TEXT, expand=True),
+                        ], spacing=8, vertical_alignment=ft.CrossAxisAlignment.START)
+                        for i, paso in enumerate(item["pasos"])
+                    ],
+                    spacing=6,
+                ),
+                ft.Container(height=10),
+                # Impacto estimado
+                ft.Container(
+                    content=ft.Row([
+                        ft.Text("📊", size=13),
+                        ft.Text(
+                            item["impacto_estimado"],
+                            size=11, color=col,
+                            weight=ft.FontWeight.BOLD,
+                            expand=True,
+                        ),
+                    ], spacing=6),
+                    bgcolor=_hex_alpha(col, "11"),
+                    border=ft.border.all(1, _hex_alpha(col, "33")),
+                    border_radius=8,
+                    padding=ft.padding.symmetric(horizontal=10, vertical=7),
+                ),
+                ft.Container(height=6),
+                # Referencia OMS
+                ft.Row([
+                    ft.Text("🌍", size=11),
+                    ft.Text(item["oms_ref"], size=10, color=MUTED, expand=True),
+                ], spacing=4),
+            ], spacing=2),
+            visible=False,
+            padding=ft.padding.only(top=12, left=4, right=4, bottom=4),
+        )
+
+        chevron = ft.Text("›", size=22, color=MUTED)
+
+        def _toggle(e, b=body, ch=chevron):
+            b.visible = not b.visible
+            ch.value  = "‹" if b.visible else "›"
+            page.update()
+
+        cards.append(
+            ft.Container(
+                content=ft.Column([
+                    ft.GestureDetector(
+                        content=ft.Row([
+                            # Icono circular con fondo de color
+                            ft.Container(
+                                content=ft.Text(item["icon"], size=24),
+                                bgcolor=_hex_alpha(col, "22"),
+                                border_radius=14,
+                                width=52, height=52,
+                                alignment=ft.alignment.Alignment(0, 0),
+                            ),
+                            # Título + subtítulo + chip categoría
+                            ft.Column([
+                                ft.Text(
+                                    item["titulo"],
+                                    size=13,
+                                    weight=ft.FontWeight.W_700,
+                                    color=TEXT,
+                                ),
+                                ft.Text(
+                                    item["subtitulo"],
+                                    size=11,
+                                    color=MUTED,
+                                ),
+                                ft.Container(height=2),
+                                ft.Container(
+                                    content=ft.Text(
+                                        cat_label,
+                                        size=9,
+                                        color=WHITE,
+                                        weight=ft.FontWeight.BOLD,
+                                    ),
+                                    bgcolor=cat_col,
+                                    border_radius=100,
+                                    padding=ft.padding.symmetric(horizontal=8, vertical=3),
+                                ),
+                            ], spacing=2, expand=True),
+                            chevron,
+                        ], spacing=12, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                        on_tap=_toggle,
+                    ),
+                    body,
+                ], spacing=0),
+                bgcolor=CARD,
+                border=ft.border.all(1, BORDER),
+                border_radius=16,
+                padding=14,
+                margin=ft.margin.only(bottom=8),
+            )
+        )
+
+    # Banner OMS al pie de la sección
+    oms_banner = ft.Container(
+        content=ft.Row([
+            ft.Text("🌍", size=16),
+            ft.Text(
+                "Basado en los principios de Entorno Saludable promovidos por la "
+                "World Health Organization (OMS)",
+                size=11,
+                color=ACCENT,
+                expand=True,
+            ),
+        ], spacing=8),
+        bgcolor=_hex_alpha(ACCENT, "0d"),
+        border=ft.border.all(1, _hex_alpha(ACCENT, "33")),
+        border_radius=12,
+        padding=12,
+        margin=ft.margin.only(top=4, bottom=8),
+    )
+
+    return ft.Column([*cards, oms_banner], spacing=0)
 
 
 # ─── Builder principal ────────────────────────────────────────────────────────
@@ -421,6 +593,9 @@ def build_recomendaciones(page, state):
             ),
         ], spacing=8), padding=14)
 
+    # ── Módulo Arquitectura Preventiva ────────────────────────────────────────
+    arq_preventiva_section = _build_arq_preventiva(page)
+
     # ── Layout final ──────────────────────────────────────────────────────────
     return ft.Column([
         resumen_card,
@@ -428,7 +603,17 @@ def build_recomendaciones(page, state):
         titulo_seccion("ANÁLISIS COMBINADO"),
         ft.Container(height=6),
         combinado_card,
-        ft.Container(height=12),
+        ft.Container(height=16),
+        titulo_seccion("ARQUITECTURA PREVENTIVA"),
+        ft.Container(height=4),
+        ft.Text(
+            "Recomendaciones personalizadas para transformar tu entorno",
+            size=12,
+            color=MUTED,
+        ),
+        ft.Container(height=8),
+        arq_preventiva_section,
+        ft.Container(height=4),
         titulo_seccion("INTERVENCIONES PRIORITARIAS"),
         ft.Container(height=6),
         *rec_cards,

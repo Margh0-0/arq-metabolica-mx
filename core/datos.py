@@ -349,6 +349,123 @@ RECOMENDACIONES = [
     {"icon": "🪟", "color": "#f59e0b", "titulo": "Diseño Arquitectónico",      "desc": "Ventilación cruzada y acceso escaleras",                      "impacto": "Compensación: +18%"},
 ]
 
+# ─── ARQUITECTURA PREVENTIVA ──────────────────────────────────────────────────
+# Recomendaciones personalizadas basadas en principios OMS de entorno saludable.
+# Cada item tiene: id, icon, color, titulo, subtitulo, descripcion, pasos (lista),
+# oms_ref (referencia OMS), impacto_estimado (texto), categoria.
+ARQ_PREVENTIVA = [
+    {
+        "id":       "ruta_peatonal",
+        "icon":     "🚶",
+        "color":    "#0ea5e9",   # Azul cielo
+        "titulo":   "Ruta Peatonal Diaria",
+        "subtitulo": "15–30 min caminados en tu colonia",
+        "descripcion": (
+            "Diseñar una ruta peatonal personal y repetirla a diario activa el músculo "
+            "sin necesitar instalaciones. La OMS recomienda al menos 150 min semanales "
+            "de actividad física moderada — una caminata diaria de 20 min los cubre."
+        ),
+        "pasos": [
+            "Identificá 2–3 rutas desde tu casa con banquetas accesibles.",
+            "Fijá una hora fija (mañana o tarde) para crear hábito.",
+            "Sumá 5 min cada semana hasta llegar a 30 min continuos.",
+            "Registrá la ruta en un mapa y compartila con alguien de tu familia.",
+        ],
+        "oms_ref":          "OMS — Actividad física: 150 min/sem moderada (2020)",
+        "impacto_estimado": "↓ 30% riesgo diabetes tipo 2 con 30 min/día",
+        "categoria":        "movimiento",
+    },
+    {
+        "id":       "rediseno_espacio",
+        "icon":     "🏠",
+        "color":    "#8b5cf6",   # Violeta
+        "titulo":   "Rediseño de Patio o Vivienda",
+        "subtitulo": "Espacios que invitan al movimiento",
+        "descripcion": (
+            "El diseño del hogar puede sumar o restar actividad física involuntaria. "
+            "Reorganizar muebles, liberar pasillos y crear zonas activas dentro "
+            "del hogar aumenta el movimiento espontáneo, especialmente en viviendas "
+            "con espacio exterior limitado."
+        ),
+        "pasos": [
+            "Liberá al menos 4 m² de espacio libre para estiramiento o ejercicio.",
+            "Mové el escritorio/TV para que requieran levantarse con más frecuencia.",
+            "Creá una zona de estiramiento con tapete y acceso a luz natural.",
+            "Si tenés patio: habilitá un circuito corto (5 min) de caminata.",
+        ],
+        "oms_ref":          "OMS — Ciudades saludables: entorno construido activo (2016)",
+        "impacto_estimado": "+8–12% actividad física diaria sin esfuerzo consciente",
+        "categoria":        "diseño",
+    },
+    {
+        "id":       "ventilacion_luz",
+        "icon":     "🪟",
+        "color":    "#f59e0b",   # Ámbar
+        "titulo":   "Ventilación y Luz Natural",
+        "subtitulo": "Neuroarquitectura aplicada al hogar",
+        "descripcion": (
+            "La luz natural regula el ritmo circadiano y mejora el sueño — factor "
+            "directo en la sensibilidad a la insulina. La ventilación cruzada "
+            "reduce el CO₂ interior y el cortisol. Estudios de neuroarquitectura "
+            "muestran reducciones de hasta 18% en marcadores de estrés."
+        ),
+        "pasos": [
+            "Abrí ventanas opuestas 10 min al día para ventilación cruzada.",
+            "Exponete a luz solar directa dentro de la primera hora al despertar.",
+            "Reubicá tu zona de trabajo cerca de la fuente de luz natural.",
+            "Usá cortinas translúcidas en vez de opacas durante el día.",
+        ],
+        "oms_ref":          "OMS — Calidad de aire en interiores y salud (2010)",
+        "impacto_estimado": "↓ 18% cortisol — mejora de sueño y sensibilidad insulínica",
+        "categoria":        "diseño",
+    },
+    {
+        "id":       "microhuerto",
+        "icon":     "🌱",
+        "color":    "#22c55e",   # Verde
+        "titulo":   "Microhuerto Urbano",
+        "subtitulo": "Vegetales frescos a costo mínimo",
+        "descripcion": (
+            "Un microhuerto en azotea, balcón o ventana provee acceso directo a "
+            "vegetales frescos con bajo índice glucémico. Además, la actividad de "
+            "jardinería urbana suma movimiento liviano diario y reduce el estrés. "
+            "Es la intervención alimentaria de menor costo y mayor impacto en zonas "
+            "con alto entorno alimentario riesgoso (EAR)."
+        ),
+        "pasos": [
+            "Empezá con 3 plantas en macetas: jitomate, chile y hierba aromática.",
+            "Ubicá las macetas en el espacio con más horas de sol directo.",
+            "Dedicá 10 min diarios al riego — es actividad física y reducción de estrés.",
+            "Expandí progresivamente con lechuga, espinaca o nopal.",
+        ],
+        "oms_ref":          "OMS — Agricultura urbana y seguridad alimentaria (2017)",
+        "impacto_estimado": "↑ consumo de fibra vegetal — ↓ índice glucémico de la dieta",
+        "categoria":        "nutricion",
+    },
+    {
+        "id":       "escaleras_activas",
+        "icon":     "🏛️",
+        "color":    "#f97316",   # Naranja
+        "titulo":   "Espacios Activos: Escaleras Visibles",
+        "subtitulo": "Arquitectura que suma pasos sin pensarlo",
+        "descripcion": (
+            "Hacer que las escaleras sean el camino más obvio y atractivo incrementa "
+            "su uso hasta en un 30% frente a los elevadores. Este principio de "
+            "'default activo' es uno de los más estudiados por la OMS en intervenciones "
+            "de entorno construido: no requiere motivación, solo buen diseño."
+        ),
+        "pasos": [
+            "Si usás escaleras en tu edificio, priorizalas sobre el elevador siempre.",
+            "En casa: colocá elementos que 'inviten' a subir (plantas en escalones, iluminación).",
+            "Proponé a tu edificio señalizar las escaleras con mensajes motivadores.",
+            "Contá pisos subidos por semana como métrica de actividad.",
+        ],
+        "oms_ref":          "OMS — Entornos físicamente activos: evidencia y guías (2021)",
+        "impacto_estimado": "+30% uso de escaleras con diseño visible — +150 kcal/semana",
+        "categoria":        "movimiento",
+    },
+]
+
 # ─── BADGES ───────────────────────────────────────────────────────────────────
 BADGES = [
     {"emoji": "🏛️", "nombre": "Arquitecto Preventivo", "earned": True},
