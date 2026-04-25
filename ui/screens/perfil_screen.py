@@ -1,6 +1,6 @@
 """
 ui/screens/perfil_screen.py
-Pantalla 5 — PERFIL DE USUARIO (datos Supabase, tema, logout, progreso lecciones, badges)
+Pantalla 5 — PERFIL DE USUARIO (datos Supabase, logout, badges)
 Extraído de main.py en F5 del refactor arquitectural — 2026-04-23
 """
 
@@ -8,36 +8,12 @@ import threading
 import flet as ft
 
 from ui.theme import (
-    BG, SURFACE, CARD, BORDER, ACCENT, ACCENT2, ACCENT3,
-    LOW, MID, HIGH, TEXT, MUTED, WHITE,
-    PALETAS, get_paleta,
+    SURFACE, CARD, BORDER, ACCENT, ACCENT3,
+    HIGH, TEXT, MUTED, WHITE,
 )
 from ui.components.encuesta_widget import titulo_seccion
-from core.iarri import calc_iarri, nivel_riesgo
-from core.datos import MUNICIPIOS, LECCIONES, BADGES
-
-
-def _aplicar_paleta(nombre_paleta):
-    """Cambia SOLO las variables globales de color en ui.theme. No toca la UI."""
-    import ui.theme as _theme
-    import ui.screens.inicio_screen as _inicio
-    p = _theme.get_paleta(nombre_paleta)
-    # Actualizar ui.theme
-    _theme.BG      = p["BG"]
-    _theme.SURFACE = p["SURFACE"]
-    _theme.CARD    = p["CARD"]
-    _theme.BORDER  = p["BORDER"]
-    _theme.TEXT    = p["TEXT"]
-    _theme.MUTED   = p["MUTED"]
-    _theme.ACCENT  = p["ACCENT"]
-    # Actualizar módulos que importaron las variables (reexport)
-    _inicio.BG      = p["BG"]
-    _inicio.SURFACE = p["SURFACE"]
-    _inicio.CARD    = p["CARD"]
-    _inicio.BORDER  = p["BORDER"]
-    _inicio.TEXT    = p["TEXT"]
-    _inicio.MUTED   = p["MUTED"]
-    _inicio.ACCENT  = p["ACCENT"]
+from core.datos import MUNICIPIOS, GAMIFICACION_BADGES
+from ui.screens.gamificacion_screen import _badge_desbloqueada
 
 
 def _perfil_kpi(emoji, valor, etiqueta, color):
@@ -125,37 +101,8 @@ def build_perfil(page, state):
             municipio_usuario.current.value = ""
             page.update()
 
-    # ── Estadísticas de quizzes ──────────────────────────────
-    lecciones_completadas = []
-    for lec in LECCIONES:
-        completada = state.get(f"leccion_{lec['id']}_completada", False)
-        puntaje    = state.get(f"leccion_{lec['id']}_puntaje", 0)
-        total_preg = sum(
-            len(q.get("alimentos", [])) if q.get("tipo") == "ordena_plato"
-            else len(q.get("palabras", [])) if q.get("tipo") == "sopa_letras"
-            else len(q.get("pares", [])) if q.get("tipo") == "relaciona"
-            else 1
-            for q in lec["quiz"]
-        )
-        if total_preg == 0:
-            total_preg = len(lec["quiz"])
-        pct = int(puntaje / total_preg * 100) if completada and total_preg > 0 else 0
-        lecciones_completadas.append({
-            "lec": lec, "completada": completada,
-            "puntaje": puntaje, "total": total_preg, "pct": pct,
-        })
-
-    num_completadas = sum(1 for l in lecciones_completadas if l["completada"])
-    promedio_quiz   = (
-        sum(l["pct"] for l in lecciones_completadas if l["completada"]) // max(1, num_completadas)
-        if num_completadas > 0 else 0
-    )
-    badges_ganadas = sum(1 for b in BADGES if b["earned"])
-
-    # IARRI del municipio activo
-    muni      = MUNICIPIOS[state.get("muni_idx", 0)]
-    iarri_val = calc_iarri(muni["AV"], muni["IC"], muni["ED"], muni["EAR"], muni["IMP"])
-    nivel, col_r = nivel_riesgo(iarri_val)
+    # ── Estadísticas de badges ───────────────────────────────
+    badges_ganadas = sum(1 for b in GAMIFICACION_BADGES if _badge_desbloqueada(b, state))
 
     # ── Header ───────────────────────────────────────────────
     perfil_header = ft.Container(
@@ -174,18 +121,6 @@ def build_perfil(page, state):
                             color=TEXT, ref=nombre_usuario),
                     ft.Text("Cargando...", size=11, color=MUTED, ref=email_usuario),
                     ft.Text("", size=11, color=MUTED, ref=municipio_usuario),
-                    ft.Container(
-                        content=ft.Row([
-                            ft.Container(width=8, height=8, border_radius=4, bgcolor=col_r),
-                            ft.Text(f"IARRI {iarri_val:.2f} — Riesgo {nivel}", size=11,
-                                    color=col_r, weight=ft.FontWeight.BOLD),
-                        ], spacing=6, tight=True),
-                        bgcolor=col_r + "18",
-                        border=ft.border.all(1, col_r + "55"),
-                        border_radius=20,
-                        padding=ft.padding.symmetric(horizontal=10, vertical=4),
-                        margin=ft.margin.only(top=4),
-                    ),
                 ], spacing=2, expand=True),
             ], spacing=14, vertical_alignment=ft.CrossAxisAlignment.START),
         ], spacing=0),
@@ -199,56 +134,9 @@ def build_perfil(page, state):
 
     # ── KPIs ─────────────────────────────────────────────────
     kpis = ft.Row([
-        _perfil_kpi("📚", f"{num_completadas}/{len(LECCIONES)}", "Lecciones", ACCENT),
-        _perfil_kpi("🏅", f"{promedio_quiz}%", "Promedio",
-                    LOW if promedio_quiz >= 70 else MID),
         _perfil_kpi("🏆", f"{badges_ganadas}", "Insignias", ACCENT3),
+        _perfil_kpi("⚡", f"{state.get('gamificacion_xp', 0)}", "XP total", ACCENT),
     ], spacing=10)
-
-    # ── Selector de tema ─────────────────────────────────────
-    paleta_actual = state.get("paleta_nombre", "Claro (actual)")
-
-    def _on_paleta(e):
-        nombre = e.control.value
-        state["paleta_nombre"] = nombre
-        _aplicar_paleta(nombre)           # actualiza variables globales
-        rebuild = state.get("rebuild_app")
-        if rebuild:
-            rebuild()                     # reconstruye TODA la app con nuevos colores
-
-    dd_tema = ft.Dropdown(
-        value=paleta_actual,
-        options=[ft.dropdown.Option(k) for k in PALETAS],
-        border_color=BORDER,
-        focused_border_color=ACCENT,
-        color=TEXT,
-        bgcolor=SURFACE,
-        content_padding=ft.padding.symmetric(horizontal=14, vertical=10),
-        border_radius=12,
-        expand=True,
-    )
-    dd_tema.on_change = _on_paleta
-
-    tema_card = ft.Container(
-        content=ft.Column([
-            ft.Row([
-                ft.Text("🎨", size=20),
-                ft.Column([
-                    ft.Text("Tema de color", size=13,
-                            weight=ft.FontWeight.W_600, color=TEXT),
-                    ft.Text("Cambia la paleta visual de la app",
-                            size=11, color=MUTED),
-                ], spacing=1, expand=True),
-            ], spacing=10),
-            ft.Container(height=10),
-            dd_tema,
-        ], spacing=0),
-        bgcolor=CARD,
-        border=ft.border.all(1, BORDER),
-        border_radius=16,
-        padding=16,
-        shadow=ft.BoxShadow(blur_radius=6, color="#0000000a", offset=ft.Offset(0, 1)),
-    )
 
     # ── Cerrar sesión / Registrarse ─────────────────────────
     es_inv = state.get("es_invitado", False)
@@ -325,87 +213,32 @@ def build_perfil(page, state):
             shadow=ft.BoxShadow(blur_radius=6, color="#0000000a", offset=ft.Offset(0, 1)),
         )
 
-    # ── Barras de progreso por lección ───────────────────────
-    quiz_cards = []
-    for item in lecciones_completadas:
-        lec       = item["lec"]
-        pct       = item["pct"]
-        done      = item["completada"]
-        bar_color = LOW if pct >= 80 else MID if pct >= 50 else (HIGH if done else BORDER)
-
-        quiz_cards.append(
-            ft.Container(
-                content=ft.Column([
-                    ft.Row([
-                        ft.Container(
-                            content=ft.Text(lec["emoji"], size=18),
-                            bgcolor=lec["color"] + "22",
-                            border_radius=10,
-                            width=36, height=36,
-                            alignment=ft.alignment.Alignment(0, 0),
-                        ),
-                        ft.Column([
-                            ft.Text(lec["titulo"], size=12, weight=ft.FontWeight.W_600,
-                                    color=TEXT, max_lines=1),
-                            ft.Text(
-                                f"{item['puntaje']}/{item['total']} correctas — {pct}%"
-                                if done else "No completada aún",
-                                size=11, color=MUTED,
-                            ),
-                        ], spacing=2, expand=True),
-                        ft.Text(
-                            f"{pct}%" if done else "—",
-                            size=16, weight=ft.FontWeight.W_900,
-                            color=bar_color,
-                        ),
-                    ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-                    ft.Container(height=6),
-                    ft.Container(
-                        content=ft.Container(
-                            bgcolor=bar_color,
-                            border_radius=4,
-                            height=6,
-                            width=max(0, pct / 100) * 320 if done else 0,
-                        ),
-                        bgcolor=BORDER,
-                        border_radius=4,
-                        height=6,
-                        expand=True,
-                        clip_behavior=ft.ClipBehavior.HARD_EDGE,
-                    ),
-                ], spacing=2),
-                bgcolor=CARD,
-                border=ft.border.all(1, lec["color"] + "44" if done else BORDER),
-                border_radius=14,
-                padding=14,
-                shadow=ft.BoxShadow(blur_radius=6, color="#0000000a", offset=ft.Offset(0, 1)),
-            )
-        )
-
     # ── Insignias ────────────────────────────────────────────
     badge_items = []
-    for b in BADGES:
+    for b in GAMIFICACION_BADGES:
+        ganada = _badge_desbloqueada(b, state)
         badge_items.append(
             ft.Container(
                 content=ft.Column([
-                    ft.Text(b["emoji"], size=26, opacity=1.0 if b["earned"] else 0.3),
+                    ft.Text(b["emoji"], size=26, opacity=1.0 if ganada else 0.3),
                     ft.Text(b["nombre"], size=9, text_align=ft.TextAlign.CENTER,
-                            color=TEXT if b["earned"] else MUTED,
-                            weight=ft.FontWeight.W_600 if b["earned"] else ft.FontWeight.NORMAL),
-                    ft.Text("✓" if b["earned"] else "🔒",
-                            size=9, color=ACCENT3 if b["earned"] else MUTED),
+                            color=TEXT if ganada else MUTED,
+                            weight=ft.FontWeight.W_600 if ganada else ft.FontWeight.NORMAL),
+                    ft.Text("✓" if ganada else "🔒",
+                            size=9, color=ACCENT3 if ganada else MUTED),
                 ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=3),
-                bgcolor=ACCENT3 + "12" if b["earned"] else CARD,
-                border=ft.border.all(1, ACCENT3 if b["earned"] else BORDER),
+                bgcolor=ACCENT3 + "12" if ganada else CARD,
+                border=ft.border.all(1, ACCENT3 if ganada else BORDER),
                 border_radius=14, padding=10,
                 expand=True,
             )
         )
 
-    badges_grid = ft.Column([
-        ft.Row(badge_items[:3], spacing=8),
-        ft.Row(badge_items[3:], spacing=8),
-    ], spacing=8)
+    # Filas de 3 en 3
+    badges_rows = []
+    for i in range(0, len(badge_items), 3):
+        badges_rows.append(ft.Row(badge_items[i:i+3], spacing=8))
+    badges_grid = ft.Column(badges_rows, spacing=8)
 
     # Cargar datos de Supabase en hilo separado (no bloquea UI)
     threading.Thread(target=_cargar_perfil_supabase, daemon=True).start()
@@ -417,17 +250,9 @@ def build_perfil(page, state):
         ft.Container(height=8),
         kpis,
         ft.Container(height=14),
-        titulo_seccion("APARIENCIA"),
-        ft.Container(height=8),
-        tema_card,
-        ft.Container(height=14),
         titulo_seccion("CUENTA"),
         ft.Container(height=8),
         logout_card,
-        ft.Container(height=14),
-        titulo_seccion("PROGRESO POR LECCIÓN"),
-        ft.Container(height=8),
-        *quiz_cards,
         ft.Container(height=14),
         titulo_seccion("INSIGNIAS OBTENIDAS"),
         ft.Container(height=8),

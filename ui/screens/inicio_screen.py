@@ -7,19 +7,14 @@ Extraído de main.py en F5 del refactor arquitectural — 2026-04-23
 import flet as ft
 
 from ui.theme import (
-    COLORES, PALETAS, get_paleta,
-    BG, SURFACE, CARD, BORDER, ACCENT, ACCENT2, ACCENT3,
+    SURFACE, CARD, BORDER, ACCENT, ACCENT2, ACCENT3,
     LOW, MID, HIGH, TEXT, MUTED, WHITE,
 )
 from ui.components.tarjeta import tarjeta
 from ui.components.badge_riesgo import badge_riesgo
-from ui.components.barra_progreso import barra_progreso, progress_bar_row
-from ui.components.encuesta_widget import build_encuesta, titulo_seccion
-from core.iarri import calc_iarri, nivel_riesgo, prob_ri, monte_carlo, WEIGHTS
-from core.datos import (
-    MUNICIPIOS, DATOS_TERRITORIALES, ENCUESTA, VARIABLES,
-    RECOMENDACIONES, BADGES, LECCIONES, _csv_datos,
-)
+from ui.components.encuesta_widget import titulo_seccion
+from core.iarri import calc_iarri, nivel_riesgo, prob_ri, WEIGHTS
+from core.datos import MUNICIPIOS, VARIABLES
 
 
 # ═══════════════════════════════════════════════════════════
@@ -217,11 +212,13 @@ def build_inicio(page, state):
                 ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
                 ft.Text(v["key"], size=13, weight=ft.FontWeight.BOLD, color=TEXT),
                 ft.Text(v["label"], size=10, color=MUTED),
-                ft.Container(
-                    content=ft.Container(bgcolor=v["color"], border_radius=3, height=5,
-                                         width=max(2, val * 130)),
-                    bgcolor=BORDER, border_radius=3, height=5,
-                    margin=ft.margin.only(top=4),
+                ft.ProgressBar(
+                    value=val,
+                    color=v["color"],
+                    bgcolor=BORDER,
+                    border_radius=3,
+                    height=5,
+                    expand=True,
                 ),
             ], spacing=4),
             bgcolor=CARD,
@@ -236,35 +233,48 @@ def build_inicio(page, state):
     grid_row2 = ft.Row([var_cards[2], var_cards[3]], spacing=10, expand=True)
     grid_row3 = ft.Row([var_cards[4]], spacing=10, expand=True)
 
-    # Sensibilidad
+    # Sensibilidad — contribución real de cada variable al IARRI del municipio activo
+    # contribución = peso × valor_municipal (para vars de riesgo) o peso × (1-valor) (para vars protectoras)
+    _SENS_META = {
+        "IC":  (ACCENT,  "Caminabilidad (protector)"),
+        "EAR": (ACCENT2, "Entorno Alimentario (riesgo)"),
+        "AV":  (LOW,     "Áreas Verdes (protector)"),
+        "ED":  (ACCENT3, "Equip. Deportivo (protector)"),
+        "IMP": (MID,     "Marginación (riesgo)"),
+    }
+    _RIESGO = {"EAR", "IMP"}  # vars de riesgo — mayor valor = mayor contribución al IARRI
     sens_items = [
-        ("IC",  0.25, ACCENT,  "Mayor impacto (protector)"),
-        ("EAR", 0.25, ACCENT2, "Mayor impacto (riesgo)"),
-        ("AV",  0.20, LOW,     "Impacto medio"),
-        ("ED",  0.15, ACCENT3, "Impacto moderado"),
-        ("IMP",  0.15, MID,     "Impacto moderado"),
+        (
+            k,
+            WEIGHTS[k] * muni[k] if k in _RIESGO else WEIGHTS[k] * (1 - muni[k]),
+            color,
+            hint,
+        )
+        for k, (color, hint) in _SENS_META.items()
     ]
     sens_rows = []
-    for k, val, c, hint in sens_items:
+    for k, contribucion, c, hint in sens_items:
         sens_rows.append(
             ft.Row([
                 ft.Text(k, size=12, color=MUTED, width=36, font_family="monospace",
                         weight=ft.FontWeight.BOLD),
-                ft.Container(
-                    content=ft.Container(bgcolor=c, border_radius=3,
-                                          height=8, width=val * 300),
-                    bgcolor=BORDER, border_radius=3, height=8, expand=True,
-                    clip_behavior=ft.ClipBehavior.HARD_EDGE,
+                ft.ProgressBar(
+                    value=contribucion,
+                    color=c,
+                    bgcolor=BORDER,
+                    border_radius=3,
+                    height=8,
+                    expand=True,
                 ),
-                ft.Text(f"{val:.2f}", size=11, color=c, width=36,
+                ft.Text(f"{contribucion:.2f}", size=11, color=c, width=36,
                         text_align=ft.TextAlign.RIGHT, font_family="monospace"),
             ], spacing=8)
         )
 
-    sens_card = tarjeta(ft.Column([ #analisis de derivada parcial
-        ft.Text("∂IARRI — Derivadas Parciales", size=13,
+    sens_card = tarjeta(ft.Column([
+        ft.Text("Contribución al IARRI", size=13,
                 weight=ft.FontWeight.BOLD, color=TEXT),
-        ft.Text("Mayor impacto: Caminabilidad (IC) y Entorno Alimentario (EAR)",
+        ft.Text(f"Aporte real de cada variable en {muni['nombre']}",
                 size=10, color=MUTED),
         *sens_rows,
     ], spacing=8))
