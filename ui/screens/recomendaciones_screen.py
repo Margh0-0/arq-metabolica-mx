@@ -21,6 +21,7 @@ from ui.theme import (
 from ui.components.tarjeta import tarjeta
 from ui.components.encuesta_widget import titulo_seccion
 from core.iarri import calc_iarri, nivel_riesgo, prob_ri
+from core.iarm import nivel_riesgo_iarm, narrativa_combinada
 from core.datos import MUNICIPIOS, RECOMENDACIONES
 
 
@@ -346,9 +347,87 @@ def build_recomendaciones(page, state):
         ),
     ], spacing=10))
 
+    # ── Card análisis combinado IARRI × IARM ──────────────────────────────────
+    iarm_ultimo = state.get("iarm_ultimo")
+
+    if resultado_guardado and iarm_ultimo:
+        niv_iarri = resultado_guardado["nivel"]
+        niv_iarm  = iarm_ultimo["nivel"]
+        narr      = narrativa_combinada(niv_iarri, niv_iarm)
+        col_iarri = nivel_riesgo(resultado_guardado["iarri"])[1]
+        col_iarm  = nivel_riesgo_iarm(iarm_ultimo["iarm"])[1]
+
+        combinado_card = tarjeta(ft.Column([
+            ft.Row([
+                ft.Text(narr["icono"], size=22),
+                ft.Text("Análisis Combinado IARRI × IARM", size=13,
+                        weight=ft.FontWeight.BOLD, color=TEXT),
+            ], spacing=8),
+            ft.Container(height=6),
+            ft.Row([
+                ft.Column([
+                    ft.Text("IARRI", size=10, color=MUTED,
+                            text_align=ft.TextAlign.CENTER),
+                    ft.Text(f"{resultado_guardado['iarri']:.3f}", size=22,
+                            weight=ft.FontWeight.W_900, color=col_iarri,
+                            text_align=ft.TextAlign.CENTER),
+                    ft.Text(f"● {niv_iarri}", size=10, color=col_iarri,
+                            weight=ft.FontWeight.BOLD,
+                            text_align=ft.TextAlign.CENTER),
+                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, expand=True),
+                ft.Text("✕", size=16, color=MUTED),
+                ft.Column([
+                    ft.Text("IARM", size=10, color=MUTED,
+                            text_align=ft.TextAlign.CENTER),
+                    ft.Text(f"{iarm_ultimo['iarm']:.3f}", size=22,
+                            weight=ft.FontWeight.W_900, color=col_iarm,
+                            text_align=ft.TextAlign.CENTER),
+                    ft.Text(f"● {niv_iarm}", size=10, color=col_iarm,
+                            weight=ft.FontWeight.BOLD,
+                            text_align=ft.TextAlign.CENTER),
+                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, expand=True),
+            ], alignment=ft.MainAxisAlignment.SPACE_EVENLY),
+            ft.Container(height=8),
+            ft.Container(
+                content=ft.Text(narr["titulo"], size=13,
+                                weight=ft.FontWeight.BOLD, color=narr["color"]),
+                bgcolor=_hex_alpha(narr["color"], "11"),
+                border=ft.border.all(1, _hex_alpha(narr["color"], "44")),
+                border_radius=10,
+                padding=ft.padding.symmetric(horizontal=12, vertical=8),
+            ),
+            ft.Container(height=4),
+            ft.Text(narr["mensaje"], size=12, color=TEXT),
+            ft.Container(height=6),
+            ft.Container(
+                content=ft.Row([
+                    ft.Text("💡", size=13),
+                    ft.Text(narr["accion"], size=12, color=TEXT, expand=True),
+                ], spacing=8),
+                bgcolor=_hex_alpha(ACCENT, "0d"),
+                border=ft.border.all(1, _hex_alpha(ACCENT, "33")),
+                border_radius=10,
+                padding=12,
+            ),
+        ], spacing=6), padding=14)
+    else:
+        combinado_card = tarjeta(ft.Column([
+            ft.Text("Análisis Combinado IARRI × IARM", size=13,
+                    weight=ft.FontWeight.BOLD, color=ACCENT),
+            ft.Text(
+                "Calculá tanto el IARRI como el IARM en la pestaña Calcular "
+                "para ver el análisis combinado aquí.",
+                size=12, color=MUTED,
+            ),
+        ], spacing=8), padding=14)
+
     # ── Layout final ──────────────────────────────────────────────────────────
     return ft.Column([
         resumen_card,
+        ft.Container(height=12),
+        titulo_seccion("ANÁLISIS COMBINADO"),
+        ft.Container(height=6),
+        combinado_card,
         ft.Container(height=12),
         titulo_seccion("INTERVENCIONES PRIORITARIAS"),
         ft.Container(height=6),

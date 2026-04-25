@@ -263,6 +263,83 @@ VARIABLES = [
     {"key": "IMP", "label": "Índice de Marginación",                  "icon": "📉", "color": "#f59e0b", "inv": False, "desc": "CONAPO normalizado"},
 ]
 
+# ─── VARIABLES IARM ───────────────────────────────────────────────────────────
+# Definición de los 4 factores del IARM (Índice Arquitectónico de Riesgo Metabólico)
+# Todos son de riesgo DIRECTO: mayor valor = mayor riesgo ambiental territorial.
+# Los colores son strings hex — sin dependencia de UI.
+VARIABLES_IARM = [
+    {
+        "key":   "ST",
+        "label": "Sedentarismo Territorial",
+        "icon":  "🪑",
+        "color": "#ef4444",
+        "inv":   False,
+        "desc":  "% población sin actividad física en la zona",
+    },
+    {
+        "key":   "BAV",
+        "label": "Baja Área Verde",
+        "icon":  "🏜️",
+        "color": "#f97316",
+        "inv":   False,
+        "desc":  "Déficit de m² de área verde por habitante",
+    },
+    {
+        "key":   "DEN",
+        "label": "Alta Densidad Poblacional",
+        "icon":  "🏙️",
+        "color": "#f59e0b",
+        "inv":   False,
+        "desc":  "Hab/km² normalizado respecto al máximo municipal",
+    },
+    {
+        "key":   "BEA",
+        "label": "Bajo Equipamiento Activo",
+        "icon":  "🚫",
+        "color": "#8b5cf6",
+        "inv":   False,
+        "desc":  "Déficit de instalaciones deportivas / 10k hab",
+    },
+]
+
+# ─── RECOMENDACIONES IARM ─────────────────────────────────────────────────────
+# Acciones e intervenciones según nivel de riesgo del IARM
+RECOMENDACIONES_IARM = {
+    "Bajo riesgo ambiental": {
+        "icono":   "✅",
+        "color":   "#22c55e",
+        "titulo":  "Entorno favorable — mantener y reforzar",
+        "items": [
+            "Documentar las buenas prácticas de diseño urbano existentes.",
+            "Promover la actividad física espontánea aprovechando la infraestructura actual.",
+            "Participar en programas de mantenimiento de áreas verdes y equipamiento.",
+        ],
+    },
+    "Riesgo medio": {
+        "icono":   "🟡",
+        "color":   "#f59e0b",
+        "titulo":  "Intervención preventiva recomendada",
+        "items": [
+            "Identificar los 2 factores con peor puntaje y priorizar su mejora.",
+            "Gestionar ante autoridades la ampliación de áreas verdes en déficit.",
+            "Proponer rutas peatonales seguras para reducir sedentarismo territorial.",
+            "Revisar densificación urbana y su impacto en calidad de vida activa.",
+        ],
+    },
+    "Alto riesgo": {
+        "icono":   "🚨",
+        "color":   "#ef4444",
+        "titulo":  "Alerta — intervención urgente requerida",
+        "items": [
+            "Gestión urgente de equipamiento deportivo: al menos 2 unidades barriales.",
+            "Plan emergente de áreas verdes: mínimo 1 parque de bolsillo por colonia.",
+            "Reducción de densidad en nuevos desarrollos mediante normativa.",
+            "Programa municipal de activación física con incentivos comunitarios.",
+            "Diagnóstico participativo con residentes para co-diseñar intervenciones.",
+        ],
+    },
+}
+
 # ─── RECOMENDACIONES ──────────────────────────────────────────────────────────
 RECOMENDACIONES = [
     {"icon": "🌳", "color": "#22c55e", "titulo": "Incrementar Áreas Verdes",  "desc": "Corredores verdes y microparques. AV: 0.30 → 0.55",          "impacto": "↓ IARRI −0.05 (−6.4%)"},
