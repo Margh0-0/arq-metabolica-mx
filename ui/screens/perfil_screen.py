@@ -11,6 +11,14 @@ from ui.theme import (
     SURFACE, CARD, BORDER, ACCENT, ACCENT3,
     HIGH, TEXT, MUTED, WHITE,
 )
+
+
+def _hex_alpha(color: str, alpha_hex: str) -> str:
+    """Concatena color hex con sufijo de opacidad de 2 dígitos."""
+    base = color.lstrip("#")
+    if len(base) == 8:
+        return f"#{base[:6]}{alpha_hex}"
+    return f"#{base}{alpha_hex}"
 from ui.components.encuesta_widget import titulo_seccion
 from core.datos import MUNICIPIOS, GAMIFICACION_BADGES
 from ui.screens.gamificacion_screen import _badge_desbloqueada
@@ -240,6 +248,58 @@ def build_perfil(page, state):
         badges_rows.append(ft.Row(badge_items[i:i+3], spacing=8))
     badges_grid = ft.Column(badges_rows, spacing=8)
 
+    # ── Metodología y Fuentes ─────────────────────────────────
+    fases = [
+        ("Fase 1", "Integración de datos (INEGI, CONAPO, DENUE)"),
+        ("Fase 2", "Modelado matemático IARRI-MX"),
+        ("Fase 3", "Validación estadística (Moran I, Regresión)"),
+        ("Fase 4", "Desarrollo tecnológico (app móvil)"),
+        ("Fase 5", "Implementación piloto — Puebla"),
+    ]
+    fase_rows = [
+        ft.Row([
+            ft.Container(
+                width=8, height=8, border_radius=4, bgcolor=ACCENT,
+                margin=ft.margin.only(top=2),
+            ),
+            ft.Column([
+                ft.Text(f, size=11, color=ACCENT, weight=ft.FontWeight.BOLD),
+                ft.Text(d, size=11, color=MUTED),
+            ], spacing=1),
+        ], spacing=10)
+        for f, d in fases
+    ]
+    ods_row = ft.Row([
+        ft.Container(
+            content=ft.Text("🎯 ODS 3 — Salud y Bienestar", size=11, color=ACCENT3),
+            bgcolor=_hex_alpha(ACCENT3, "11"),
+            border=ft.border.all(1, _hex_alpha(ACCENT3, "33")),
+            border_radius=8,
+            padding=ft.padding.symmetric(horizontal=10, vertical=5),
+        ),
+        ft.Container(
+            content=ft.Text("🌆 ODS 11 — Ciudades Sostenibles", size=11, color=ACCENT3),
+            bgcolor=_hex_alpha(ACCENT3, "11"),
+            border=ft.border.all(1, _hex_alpha(ACCENT3, "33")),
+            border_radius=8,
+            padding=ft.padding.symmetric(horizontal=10, vertical=5),
+        ),
+    ], wrap=True, spacing=8)
+
+    meto_card = ft.Container(
+        content=ft.Column([
+            ft.Text("Metodología y Fuentes", size=13, weight=ft.FontWeight.BOLD, color=TEXT),
+            ft.Container(height=4),
+            *fase_rows,
+            ft.Divider(height=1, color=BORDER),
+            ods_row,
+        ], spacing=8),
+        bgcolor=CARD,
+        border=ft.border.all(1, BORDER),
+        border_radius=16,
+        padding=14,
+    )
+
     # Cargar datos de Supabase en hilo separado (no bloquea UI)
     threading.Thread(target=_cargar_perfil_supabase, daemon=True).start()
 
@@ -257,5 +317,9 @@ def build_perfil(page, state):
         titulo_seccion("INSIGNIAS OBTENIDAS"),
         ft.Container(height=8),
         badges_grid,
+        ft.Container(height=14),
+        titulo_seccion("METODOLOGÍA Y FUENTES"),
+        ft.Container(height=8),
+        meto_card,
         ft.Container(height=32),
     ], spacing=8, scroll=ft.ScrollMode.AUTO)
