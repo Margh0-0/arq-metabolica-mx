@@ -17,18 +17,13 @@ def build_encuesta(page, on_complete):  # cambio bb
     paso_actual = [0]
     contenido = ft.Column([], spacing=12, scroll=ft.ScrollMode.AUTO)
     progreso_txt = ft.Text("", size=11, color=MUTED)
-    progreso_bar_inner = ft.Container(bgcolor=ACCENT, border_radius=4, height=4, width=0)
-    progreso_bar = ft.Container(
-        content=progreso_bar_inner,
-        bgcolor=BORDER, border_radius=4, height=4, expand=True, clip_behavior=ft.ClipBehavior.HARD_EDGE
-
-    )
+    progreso_bar = ft.ProgressBar(value=0, expand=True, color=ACCENT, bgcolor=BORDER, bar_height=4)
 
     def render_paso():
         idx = paso_actual[0]
         total = len(ENCUESTA)
         progreso_txt.value = f"Pregunta {idx+1} de {total}"
-        progreso_bar_inner.width = (idx / total) * 600
+        progreso_bar.value = idx / total
 
         q = ENCUESTA[idx]
         v = next(var for var in VARIABLES if var["key"] == q["variable"])

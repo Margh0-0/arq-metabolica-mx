@@ -462,13 +462,14 @@ def build_recomendaciones(page, state):
                     weight=ft.FontWeight.BOLD, font_family="monospace",
                 ),
                 ft.Container(
-                    content=ft.Container(
-                        bgcolor=col, border_radius=3,
-                        height=7,
-                        width=val_despues * 160,
-                    ),
-                    bgcolor=BORDER, border_radius=3, height=7,
-                    expand=True, clip_behavior=ft.ClipBehavior.HARD_EDGE,
+                    content=ft.Row([
+                        ft.Container(bgcolor=col, height=7,
+                                     expand=max(1, int(val_despues * 100))),
+                        ft.Container(bgcolor=ft.Colors.TRANSPARENT, height=7,
+                                     expand=max(1, 100 - max(1, int(val_despues * 100)))),
+                    ], spacing=0, expand=True),
+                    expand=True, height=7,
+                    clip_behavior=ft.ClipBehavior.HARD_EDGE,
                 ),
                 ft.Text(
                     f"{val_antes:.2f}→{val_despues:.2f}",
@@ -506,7 +507,7 @@ def build_recomendaciones(page, state):
                 ft.Text("Reducción", size=10, color=MUTED),
                 ft.Text(f"−{sim['reduccion_pct']:.1f}%", size=22, weight=ft.FontWeight.W_900, color=ACCENT),
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-        ], alignment=ft.MainAxisAlignment.SPACE_AROUND),
+        ], alignment=ft.MainAxisAlignment.SPACE_AROUND, wrap=True),
         ft.Container(
             content=ft.Text(
                 f"Prob. RI: {sim['prob_antes']*100:.0f}% → {sim['prob_despues']*100:.0f}%  "

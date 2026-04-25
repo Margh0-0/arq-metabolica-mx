@@ -169,7 +169,7 @@ def build_inicio(page, state):
             chips,
             ft.Text(muni["nombre"], size=20, weight=ft.FontWeight.W_900, color=TEXT),
             ft.Row([
-                ft.Text(f"{iarri:.2f}", size=58, weight=ft.FontWeight.W_900,
+                ft.Text(f"{iarri:.2f}", size=48, weight=ft.FontWeight.W_900,
                         color=col, height=70),
                 ft.Column([
                     ft.Text("IARRI-MX", size=10, color=MUTED, font_family="monospace"),
@@ -231,7 +231,13 @@ def build_inicio(page, state):
 
     grid_row1 = ft.Row([var_cards[0], var_cards[1]], spacing=10, expand=True)
     grid_row2 = ft.Row([var_cards[2], var_cards[3]], spacing=10, expand=True)
-    grid_row3 = ft.Row([var_cards[4]], spacing=10, expand=True)
+    # Single card in last row: remove expand so it doesn't stretch to full width.
+    # We wrap it in a half-width container to keep consistent 2-column visual rhythm.
+    var_cards[4].expand = False
+    grid_row3 = ft.Row([
+        ft.Container(content=var_cards[4], expand=True),
+        ft.Container(expand=True),
+    ], spacing=10, expand=True)
 
     # Sensibilidad — contribución real de cada variable al IARRI del municipio activo
     # contribución = peso × valor_municipal (para vars de riesgo) o peso × (1-valor) (para vars protectoras)

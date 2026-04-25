@@ -144,7 +144,7 @@ def build_perfil(page, state):
     kpis = ft.Row([
         _perfil_kpi("🏆", f"{badges_ganadas}", "Insignias", ACCENT3),
         _perfil_kpi("⚡", f"{state.get('gamificacion_xp', 0)}", "XP total", ACCENT),
-    ], spacing=10)
+    ], spacing=10, expand=True)
 
     # ── Cerrar sesión / Registrarse ─────────────────────────
     es_inv = state.get("es_invitado", False)
@@ -245,7 +245,7 @@ def build_perfil(page, state):
     # Filas de 3 en 3
     badges_rows = []
     for i in range(0, len(badge_items), 3):
-        badges_rows.append(ft.Row(badge_items[i:i+3], spacing=8))
+        badges_rows.append(ft.Row(badge_items[i:i+3], spacing=8, expand=True))
     badges_grid = ft.Column(badges_rows, spacing=8)
 
     # ── Metodología y Fuentes ─────────────────────────────────

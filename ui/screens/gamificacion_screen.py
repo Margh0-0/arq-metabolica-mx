@@ -288,11 +288,18 @@ def build_gamificacion(page: ft.Page, state: dict) -> ft.Column:
                 ]),
                 ft.Container(height=4),
                 ft.Container(
-                    content=ft.Container(
-                        bgcolor=reto["color"] if not completado else LOW,
-                        border_radius=4, height=8,
-                        width=max(4, pct * 320),
-                    ),
+                    content=ft.Row([
+                        ft.Container(
+                            bgcolor=reto["color"] if not completado else LOW,
+                            height=8,
+                            expand=max(1, int(pct * 100)),
+                        ),
+                        ft.Container(
+                            bgcolor=ft.Colors.TRANSPARENT,
+                            height=8,
+                            expand=max(1, 100 - int(pct * 100)),
+                        ),
+                    ], spacing=0, expand=True),
                     bgcolor=BORDER, border_radius=4, height=8,
                     expand=True, clip_behavior=ft.ClipBehavior.HARD_EDGE,
                 ),
@@ -645,11 +652,18 @@ def build_gamificacion(page: ft.Page, state: dict) -> ft.Column:
                 # Mini barra de progreso
                 ft.Container(height=6),
                 ft.Container(
-                    content=ft.Container(
-                        bgcolor=LOW if completado else r["color"],
-                        border_radius=2, height=4,
-                        width=max(4, pct * 300),
-                    ),
+                    content=ft.Row([
+                        ft.Container(
+                            bgcolor=LOW if completado else r["color"],
+                            height=4,
+                            expand=max(1, int(pct * 100)),
+                        ),
+                        ft.Container(
+                            bgcolor=ft.Colors.TRANSPARENT,
+                            height=4,
+                            expand=max(1, 100 - int(pct * 100)),
+                        ),
+                    ], spacing=0, expand=True),
                     bgcolor=BORDER, border_radius=2, height=4,
                     expand=True, clip_behavior=ft.ClipBehavior.HARD_EDGE,
                 ),
@@ -707,7 +721,7 @@ def build_gamificacion(page: ft.Page, state: dict) -> ft.Column:
         )
 
     render_home(update=False)
-    return ft.Column([contenido], expand=True, spacing=0, scroll=ft.ScrollMode.AUTO)
+    return ft.Column([contenido], expand=True, spacing=0)
 
 
 # ─── WIDGET AUXILIAR (module-level) ──────────────────────────────────────────

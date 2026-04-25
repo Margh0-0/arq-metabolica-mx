@@ -24,7 +24,6 @@ def pantalla_login(page: ft.Page, on_login_exitoso):
         label="Correo electronico",
         hint_text="tu@correo.com",
         keyboard_type=ft.KeyboardType.EMAIL,
-        width=300,
         border_color=VERDE_CLARO,
         focused_border_color=BLANCO,
         label_style=ft.TextStyle(color=BLANCO_SUAVE),
@@ -36,7 +35,6 @@ def pantalla_login(page: ft.Page, on_login_exitoso):
         label="Contrasena",
         password=True,
         can_reveal_password=True,
-        width=300,
         border_color=VERDE_CLARO,
         focused_border_color=BLANCO,
         label_style=ft.TextStyle(color=BLANCO_SUAVE),
@@ -73,7 +71,7 @@ def pantalla_login(page: ft.Page, on_login_exitoso):
         ft.Container(
             expand=True,
             bgcolor=VERDE_OSCURO,
-            padding=ft.padding.symmetric(horizontal=30, vertical=20),
+            padding=ft.padding.symmetric(horizontal=16, vertical=20),
             content=ft.Column(
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 spacing=14,
@@ -93,7 +91,7 @@ def pantalla_login(page: ft.Page, on_login_exitoso):
                             size=13, color=BLANCO_SUAVE, text_align=ft.TextAlign.CENTER),
                     ft.Container(height=6),
                     ft.Container(
-                        width=320, padding=ft.padding.all(20),
+                        expand=True, padding=ft.padding.all(20),
                         border_radius=16, bgcolor=VERDE_MEDIO,
                         content=ft.Column(
                             spacing=14,
@@ -108,7 +106,7 @@ def pantalla_login(page: ft.Page, on_login_exitoso):
                                 ft.ElevatedButton(
                                     "Entrar a la app",
                                     on_click=hacer_login,
-                                    width=260, height=44,
+                                    expand=True, height=44,
                                     icon=ft.Icons.LOGIN_ROUNDED,
                                     style=ft.ButtonStyle(
                                         bgcolor=VERDE_CLARO, color=VERDE_OSCURO,
@@ -139,26 +137,26 @@ def pantalla_login(page: ft.Page, on_login_exitoso):
 
 def pantalla_registro(page: ft.Page, on_registro_exitoso):
     nombre_field = ft.TextField(
-        label="Nombre completo", width=260,
+        label="Nombre completo",
         border_color=VERDE_CLARO, focused_border_color=BLANCO,
         label_style=ft.TextStyle(color=BLANCO_SUAVE),
         text_style=ft.TextStyle(color=BLANCO), cursor_color=BLANCO,
     )
     email_field = ft.TextField(
-        label="Correo electronico", keyboard_type=ft.KeyboardType.EMAIL, width=260,
+        label="Correo electronico", keyboard_type=ft.KeyboardType.EMAIL,
         border_color=VERDE_CLARO, focused_border_color=BLANCO,
         label_style=ft.TextStyle(color=BLANCO_SUAVE),
         text_style=ft.TextStyle(color=BLANCO), cursor_color=BLANCO,
     )
     password_field = ft.TextField(
         label="Contrasena (min. 6 caracteres)", password=True,
-        can_reveal_password=True, width=260,
+        can_reveal_password=True,
         border_color=VERDE_CLARO, focused_border_color=BLANCO,
         label_style=ft.TextStyle(color=BLANCO_SUAVE),
         text_style=ft.TextStyle(color=BLANCO), cursor_color=BLANCO,
     )
     municipio_field = ft.Dropdown(
-        label="Tu municipio", width=260,
+        label="Tu municipio",
         color=BLANCO, focused_border_color=BLANCO, border_color=VERDE_CLARO,
         label_style=ft.TextStyle(color=BLANCO_SUAVE),
         options=[
@@ -208,7 +206,7 @@ def pantalla_registro(page: ft.Page, on_registro_exitoso):
         ft.Container(
             expand=True,
             bgcolor=VERDE_OSCURO,
-            padding=ft.padding.symmetric(horizontal=30, vertical=20),
+            padding=ft.padding.symmetric(horizontal=16, vertical=20),
             content=ft.Column(
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 spacing=12,
@@ -224,7 +222,7 @@ def pantalla_registro(page: ft.Page, on_registro_exitoso):
                     ft.Text("Crear cuenta", size=24, weight=ft.FontWeight.BOLD, color=BLANCO),
                     ft.Text("Unete a ARQ-Metabolica MX", size=13, color=BLANCO_SUAVE),
                     ft.Container(
-                        width=320, padding=ft.padding.all(20),
+                        expand=True, padding=ft.padding.all(20),
                         border_radius=16, bgcolor=VERDE_MEDIO,
                         content=ft.Column(
                             spacing=12,
@@ -239,7 +237,7 @@ def pantalla_registro(page: ft.Page, on_registro_exitoso):
                                 ft.ElevatedButton(
                                     "Crear mi cuenta",
                                     on_click=hacer_registro,
-                                    width=260, height=44,
+                                    expand=True, height=44,
                                     icon=ft.Icons.CHECK_CIRCLE_ROUNDED,
                                     style=ft.ButtonStyle(
                                         bgcolor=VERDE_CLARO, color=VERDE_OSCURO,

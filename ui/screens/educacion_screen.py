@@ -154,16 +154,23 @@ def build_educacion(page: ft.Page, state: dict) -> ft.Column:
                     ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
                     ft.Container(height=4),
                     ft.Container(
-                        content=ft.Container(
-                            width=max(4, progreso_nivel * 260),
-                            height=6,
-                            bgcolor=WHITE,
-                            border_radius=3,
-                        ),
-                        width=260,
+                        content=ft.Row([
+                            ft.Container(
+                                bgcolor=WHITE,
+                                height=6,
+                                expand=max(1, int(progreso_nivel * 100)),
+                            ),
+                            ft.Container(
+                                bgcolor=ft.Colors.TRANSPARENT,
+                                height=6,
+                                expand=max(1, 100 - int(progreso_nivel * 100)),
+                            ),
+                        ], spacing=0, expand=True),
+                        expand=True,
                         height=6,
                         bgcolor=WHITE + "33",
                         border_radius=3,
+                        clip_behavior=ft.ClipBehavior.HARD_EDGE,
                     ),
                 ], spacing=0),
             ], spacing=0),
@@ -224,16 +231,23 @@ def build_educacion(page: ft.Page, state: dict) -> ft.Column:
                         # barra de progreso de lecciones
                         ft.Container(height=6),
                         ft.Container(
-                            content=ft.Container(
-                                width=max(4, progreso_frac * 280),
-                                height=4,
-                                bgcolor=mc["color"],
-                                border_radius=2,
-                            ),
-                            width=280,
+                            content=ft.Row([
+                                ft.Container(
+                                    bgcolor=mc["color"],
+                                    height=4,
+                                    expand=max(1, int(progreso_frac * 100)),
+                                ),
+                                ft.Container(
+                                    bgcolor=ft.Colors.TRANSPARENT,
+                                    height=4,
+                                    expand=max(1, 100 - int(progreso_frac * 100)),
+                                ),
+                            ], spacing=0, expand=True),
+                            expand=True,
                             height=4,
                             bgcolor=BORDER,
                             border_radius=2,
+                            clip_behavior=ft.ClipBehavior.HARD_EDGE,
                         ),
                         # descripcion breve
                         ft.Container(height=4),

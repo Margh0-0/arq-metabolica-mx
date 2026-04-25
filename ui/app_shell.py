@@ -27,9 +27,6 @@ def main(page: ft.Page):
     page.padding      = 0
     page.theme_mode   = ft.ThemeMode.LIGHT
     page.fonts        = {}
-    page.window.width     = 390
-    page.window.height    = 844
-    page.window.resizable = False
     page.window.center()
 
     # ── Intentar restaurar sesión guardada ───────────────────
@@ -302,6 +299,11 @@ def main(page: ft.Page):
         else:
             mostrar_app()
         page.update()
+
+    # ── on_resize: refrescar layout al cambiar tamaño de ventana ──
+    def on_resize(e):
+        page.update()
+    page.on_resize = on_resize
 
     # ── Arranque: sesión activa → app, sin sesión → login ─────
     state["es_invitado"] = False

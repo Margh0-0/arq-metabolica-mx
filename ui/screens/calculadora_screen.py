@@ -58,19 +58,19 @@ def build_calculadora(page, state):
     prob_txt        = ft.Text("Prob. RI: —", size=12, color=MUTED)
     guardar_btn_txt = ft.Text("💾  Guardar Resultado", size=13,
                                weight=ft.FontWeight.BOLD, color=WHITE)
-    mc_btn_txt      = ft.Text("⚡  Simulación Monte Carlo (1000 iter.)", size=13,
-                               weight=ft.FontWeight.BOLD, color=WHITE)
+    mc_btn_txt      = ft.Text("⚡  Simulación Monte Carlo (1000 iter.)", size=11,
+                               weight=ft.FontWeight.BOLD, color=WHITE,
+                               overflow=ft.TextOverflow.ELLIPSIS)
 
     # Barras de desglose IARRI
     MAX_CONTRIB = 0.25
-    BAR_MAX_PX  = 200
 
     desglose_bars = {}
     desglose_rows = []
     for v in VARIABLES:
-        bar_inner = ft.Container(bgcolor=v["color"], border_radius=3, height=8, width=4)
+        bar_inner = ft.ProgressBar(value=0, expand=True, color=v["color"], bgcolor=BORDER)
         bar_track = ft.Container(
-            content=bar_inner, bgcolor=BORDER, border_radius=3, height=8,
+            content=bar_inner, height=8,
             expand=True, clip_behavior=ft.ClipBehavior.HARD_EDGE,
         )
         val_lbl = ft.Text("0.000", size=10, color=v["color"], width=42,
@@ -112,7 +112,7 @@ def build_calculadora(page, state):
         total_contrib = max(sum(contribs.values()), 0.001)
         for k, (bar, lbl, pct) in desglose_bars.items():
             c = contribs[k]
-            bar.width = max(4, (c / MAX_CONTRIB) * BAR_MAX_PX)
+            bar.value = min(1.0, c / MAX_CONTRIB)
             lbl.value = f"{c:.3f}"
             pct.value = f"{c / total_contrib * 100:.1f}%"
         _actualizar_combinado()
@@ -486,9 +486,9 @@ def build_calculadora(page, state):
     iarm_desglose_bars = {}
     iarm_desglose_rows = []
     for v in VARIABLES_IARM:
-        bar_inner = ft.Container(bgcolor=v["color"], border_radius=3, height=8, width=4)
+        bar_inner = ft.ProgressBar(value=0, expand=True, color=v["color"], bgcolor=BORDER)
         bar_track = ft.Container(
-            content=bar_inner, bgcolor=BORDER, border_radius=3, height=8,
+            content=bar_inner, height=8,
             expand=True, clip_behavior=ft.ClipBehavior.HARD_EDGE,
         )
         val_lbl = ft.Text("0.000", size=10, color=v["color"], width=42,
@@ -549,7 +549,7 @@ def build_calculadora(page, state):
         total = max(sum(iarm_vals.values()), 0.001)
         for k, (bar, lbl, pct) in iarm_desglose_bars.items():
             c = iarm_vals[k] * 0.25   # peso igual para todos
-            bar.width = max(4, (c / 0.25) * 200)
+            bar.value = min(1.0, c / 0.25)
             lbl.value = f"{c:.3f}"
             pct.value = f"{iarm_vals[k] / total * 100:.1f}%"
         # Panel de recomendaciones
@@ -781,7 +781,7 @@ def build_calculadora(page, state):
     tab_iarri_btn = ft.Container(visible=True)
     tab_iarm_btn  = ft.Container(visible=True)
 
-    content_switcher = ft.Container(content=tab_iarri_content)
+    content_switcher = ft.Container(content=tab_iarri_content, expand=True)
 
     def _make_tab_btn(label: str, idx: int, active: bool) -> ft.GestureDetector:
         return ft.GestureDetector(
