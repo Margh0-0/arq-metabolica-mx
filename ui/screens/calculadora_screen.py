@@ -259,6 +259,21 @@ def build_calculadora(page, state):
                 }
                 state["iarri_guardado"] = True
 
+                # Persistir en Supabase
+                from data.auth_repository import obtener_usuario_actual
+                from data.resultados_repository import guardar_resultado_iarri
+                from core.datos import MUNICIPIOS
+
+                usuario = obtener_usuario_actual()
+                if usuario:
+                    muni_nombre = MUNICIPIOS[state.get("muni_idx", 0)]["nombre"]
+                    guardar_resultado_iarri(
+                        usuario_id=usuario.id,
+                        municipio=muni_nombre,
+                        iarri_total=round(iarri, 4),
+                        nivel_riesgo=nivel,
+                    )
+
                 # Incluir IARM en el guardado si ya fue calculado
                 iarm_vals = {v["key"]: state.get(f"iarm_{v['key']}", 0.5)
                              for v in VARIABLES_IARM}

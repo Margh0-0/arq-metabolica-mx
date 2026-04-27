@@ -14,6 +14,7 @@ Mecánica:
 """
 
 import flet as ft
+import threading
 
 from ui.theme import (
     BG, SURFACE, CARD, BORDER, ACCENT, ACCENT2, ACCENT3,
@@ -240,6 +241,22 @@ def build_gamificacion(page: ft.Page, state: dict) -> ft.Column:
                 state[f"reto_{reto['id']}_completado"] = True
                 # Otorgar XP
                 state["gamificacion_xp"] = state.get("gamificacion_xp", 0) + reto["xp"]
+                # Persistir progreso en Supabase (en hilo separado para no bloquear UI)
+                def _sync_reto():
+                    from data.auth_repository import obtener_usuario_actual
+                    from data.resultados_repository import guardar_progreso_reto
+                    import datetime
+                    usuario = obtener_usuario_actual()
+                    if usuario:
+                        hoy = datetime.date.today()
+                        guardar_progreso_reto(
+                            usuario_id=usuario.id,
+                            reto_id=reto["id"],
+                            semana=reto["semana"],
+                            anio=hoy.year,
+                            completado=True,
+                        )
+                threading.Thread(target=_sync_reto, daemon=True).start()
                 # Otorgar badge si aplica
                 if reto.get("badge_id"):
                     _otorgar_xp_badges(state, page)
