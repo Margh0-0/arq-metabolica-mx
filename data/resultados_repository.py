@@ -53,41 +53,24 @@ def guardar_progreso_reto(usuario_id: str, reto_id: int, semana: int, anio: int,
     """
     Inserta o actualiza el progreso de un reto para el usuario.
     Columnas: id (auto), usuario_id (uuid FK→perfiles), reto_id (int), completado (bool default false), semana (int NOT NULL), anio (int NOT NULL), created_at (auto)
-    Verifica si ya existe el registro antes de insertar para evitar duplicados.
     Retorna el registro o None si falla.
     """
     try:
         supabase = get_client()
-        # Verificar si ya existe un registro para este usuario+reto
-        existente = (
+        respuesta = (
             supabase.table("progreso_retos")
-            .select("id")
-            .eq("usuario_id", usuario_id)
-            .eq("reto_id", reto_id)
-            .execute()
-        )
-        if existente.data:
-            # Actualizar el registro existente
-            registro_id = existente.data[0]["id"]
-            respuesta = (
-                supabase.table("progreso_retos")
-                .update({"completado": completado})
-                .eq("id", registro_id)
-                .execute()
-            )
-        else:
-            # Insertar nuevo registro
-            respuesta = (
-                supabase.table("progreso_retos")
-                .insert({
+            .upsert(
+                {
                     "usuario_id": usuario_id,
                     "reto_id":    reto_id,
                     "semana":     semana,
                     "anio":       anio,
                     "completado": completado,
-                })
-                .execute()
+                },
+                on_conflict="usuario_id,reto_id",
             )
+            .execute()
+        )
         return respuesta.data[0] if respuesta.data else None
     except Exception as ex:
         print(f"[repo] error: {ex}")
