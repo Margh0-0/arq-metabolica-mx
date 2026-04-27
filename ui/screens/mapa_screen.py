@@ -332,15 +332,17 @@ def build_mapa(page, state):
                     ),
                 ))
 
-                # CircleMarker: color = borde, opacity en el propio control
+                # CircleMarker: alpha en el color de relleno (#AARRGGBB)
+                # 0F = 6% opacidad — borde opaco para delimitar el área
+                _alpha = hex(int(0.06 * 255))[2:].upper().zfill(2)
+                _fill  = f"#{_alpha}{_cv[1:]}"   # e.g. "#0F22c55e"
                 _circles.append(_ftm.CircleMarker(
                     coordinates=_ftm.MapLatitudeLongitude(_mlat, _mlon),
                     radius=700 + _iv * 1800,
                     use_radius_in_meter=True,
-                    color=_cv,
+                    color=_fill,
                     border_color=_cv,
                     border_stroke_width=2,
-                    opacity=0.15,
                 ))
 
             for _poi in _pois.get(muni_nom, []):
