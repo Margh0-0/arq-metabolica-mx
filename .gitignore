@@ -16,6 +16,8 @@ build/
 .venv/
 venv/
 env/
+.env
+sesion_local.json
 
 # IDEs
 .vscode/
@@ -29,3 +31,5 @@ nul
 
 # Flet build output
 build/
+
+.atl/
