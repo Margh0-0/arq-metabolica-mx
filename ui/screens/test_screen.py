@@ -2,6 +2,12 @@
 ui/screens/test_screen.py
 Pantalla TEST — Test de síntomas de Resistencia a la Insulina (14 preguntas)
 Extraído de main.py en F5 del refactor arquitectural — 2026-04-23
+
+Mejoras 2026-04-27:
+  - Layout mobile: botones en Column vertical (sin overflow)
+  - Barra de progreso reactiva (respondidas / 14)
+  - Indicador visual de preguntas sin responder (highlight rojo)
+  - Resultado persistido en state["test_resultado"] para sobrevivir navegación
 """
 
 import flet as ft
@@ -48,14 +54,47 @@ PREGUNTAS_TEST = [
      "categoria": "Estilo de vida",     "resp_si": "Sí, todo el tiempo",       "resp_no": "No, estoy tranquilo/a"},
 ]
 
+_TOTAL = len(PREGUNTAS_TEST)  # 14
+
 
 def build_test(page, state):
-    respuestas = [None] * len(PREGUNTAS_TEST)
-    resultado_ref = [None]
+    # ── Estado ────────────────────────────────────────────────
+    respuestas  = [None] * _TOTAL          # True | False | None
+    botones_refs = []                      # [[btn_si, btn_no], ...]
+    tarjetas_refs = []                     # [ft.Container, ...]  — para highlight de pendientes
 
+    # ── Widgets reactivos globales ────────────────────────────
+    progreso_txt = ft.Text(
+        f"0 de {_TOTAL} respondidas",
+        size=11, color=MUTED,
+    )
+    progreso_bar = ft.ProgressBar(
+        value=0, expand=True, color=ACCENT, bgcolor=BORDER, bar_height=6,
+    )
     resultado_container = ft.Column([], visible=False, spacing=10)
-    botones_refs = []
 
+    # ── Helpers ───────────────────────────────────────────────
+    def _respondidas():
+        return sum(1 for r in respuestas if r is not None)
+
+    def _actualizar_progreso():
+        n = _respondidas()
+        progreso_txt.value = f"{n} de {_TOTAL} respondidas"
+        progreso_bar.value = n / _TOTAL
+
+    def _highlight_pendientes():
+        """Marca en rojo las tarjetas sin respuesta para que el usuario las encuentre."""
+        for i, card in enumerate(tarjetas_refs):
+            if respuestas[i] is None:
+                card.border = ft.border.all(2, HIGH + "99")
+            else:
+                card.border = ft.border.all(1, BORDER)
+
+    def _limpiar_highlights():
+        for card in tarjetas_refs:
+            card.border = ft.border.all(1, BORDER)
+
+    # ── Resultado ─────────────────────────────────────────────
     def calcular_resultado():
         total_si = sum(1 for r in respuestas if r is True)
         if total_si <= 3:
@@ -74,6 +113,16 @@ def build_test(page, state):
             emoji = "🔴"
             desc  = "Presentas varios indicadores de resistencia a la insulina. Consulta a un médico y solicita estudios de glucosa e insulina en ayuno."
 
+        # Persistir en state para sobrevivir navegación entre tabs
+        state["test_resultado"] = {
+            "nivel": nivel,
+            "color": color,
+            "emoji": emoji,
+            "desc":  desc,
+            "total_si": total_si,
+        }
+
+        _limpiar_highlights()
         resultado_container.controls = [
             ft.Container(height=8),
             tarjeta(ft.Column([
@@ -81,7 +130,7 @@ def build_test(page, state):
                     ft.Text(emoji, size=32),
                     ft.Column([
                         ft.Text(nivel, size=18, weight=ft.FontWeight.BOLD, color=color),
-                        ft.Text(f"{total_si} de 14 síntomas presentes", size=12, color=MUTED),
+                        ft.Text(f"{total_si} de {_TOTAL} síntomas presentes", size=12, color=MUTED),
                     ], spacing=2),
                 ], spacing=12),
                 ft.Container(height=6),
@@ -91,12 +140,16 @@ def build_test(page, state):
                 ft.Container(height=8),
                 ft.Text("Pruebas médicas recomendadas", size=12,
                         weight=ft.FontWeight.BOLD, color=ACCENT),
-                ft.Text("• Glucosa en ayuno\n• Insulina en ayuno\n• Índice HOMA-IR\n• Hemoglobina glucosilada (HbA1c)",
-                        size=12, color=TEXT),
+                ft.Text(
+                    "• Glucosa en ayuno\n• Insulina en ayuno\n• Índice HOMA-IR\n• Hemoglobina glucosilada (HbA1c)",
+                    size=12, color=TEXT,
+                ),
                 ft.Container(height=8),
                 ft.Text("💡 Consejo clave", size=12, weight=ft.FontWeight.BOLD, color=MID),
-                ft.Text("La resistencia a la insulina es reversible en muchos casos con cambios constantes (no extremos).",
-                        size=12, color=TEXT),
+                ft.Text(
+                    "La resistencia a la insulina es reversible en muchos casos con cambios constantes (no extremos).",
+                    size=12, color=TEXT,
+                ),
             ], spacing=6)),
             ft.Container(height=8),
             ft.ElevatedButton(
@@ -112,8 +165,17 @@ def build_test(page, state):
         resultado_container.visible = True
         page.update()
 
+    def intentar_ver_resultado():
+        """Muestra resultado si todas respondidas, si no resalta las pendientes."""
+        if _respondidas() == _TOTAL:
+            calcular_resultado()
+        else:
+            _highlight_pendientes()
+            page.update()
+
+    # ── Reinicio ──────────────────────────────────────────────
     def reiniciar_test():
-        for i in range(len(respuestas)):
+        for i in range(_TOTAL):
             respuestas[i] = None
         for row in botones_refs:
             for btn in row:
@@ -122,14 +184,18 @@ def build_test(page, state):
                     side=ft.BorderSide(1, BORDER),
                     shape=ft.RoundedRectangleBorder(radius=8),
                 )
+        _limpiar_highlights()
+        _actualizar_progreso()
         resultado_container.visible = False
         resultado_container.controls = []
+        state.pop("test_resultado", None)
         page.update()
 
+    # ── Handler de respuesta ──────────────────────────────────
     def on_respuesta(idx, valor, btn_si, btn_no):
         def handler(e):
             respuestas[idx] = valor
-            # Resaltar botón seleccionado
+            # Feedback visual: resaltar botón seleccionado
             if valor is True:
                 btn_si.style = ft.ButtonStyle(
                     bgcolor=HIGH + "33", color=HIGH,
@@ -152,13 +218,17 @@ def build_test(page, state):
                     side=ft.BorderSide(1, BORDER),
                     shape=ft.RoundedRectangleBorder(radius=8),
                 )
+            # Limpiar highlight rojo de esta tarjeta si la tenía
+            tarjetas_refs[idx].border = ft.border.all(1, BORDER)
+            # Actualizar barra de progreso
+            _actualizar_progreso()
             page.update()
-            # Si todas contestadas → mostrar resultado
-            if all(r is not None for r in respuestas):
+            # Auto-calcular si están todas respondidas
+            if _respondidas() == _TOTAL:
                 calcular_resultado()
         return handler
 
-    # Construir tarjetas de preguntas
+    # ── Construir tarjetas de preguntas ───────────────────────
     preguntas_cards = []
     categoria_actual = ""
 
@@ -176,6 +246,7 @@ def build_test(page, state):
                 side=ft.BorderSide(1, BORDER),
                 shape=ft.RoundedRectangleBorder(radius=8),
             ),
+            expand=True,
         )
         btn_no = ft.ElevatedButton(
             p["resp_no"],
@@ -184,20 +255,42 @@ def build_test(page, state):
                 side=ft.BorderSide(1, BORDER),
                 shape=ft.RoundedRectangleBorder(radius=8),
             ),
+            expand=True,
         )
         btn_si.on_click = on_respuesta(idx, True,  btn_si, btn_no)
         btn_no.on_click = on_respuesta(idx, False, btn_si, btn_no)
         botones_refs.append([btn_si, btn_no])
 
-        preguntas_cards.append(
-            tarjeta(ft.Column([
+        # Tarjeta con Column vertical — sin overflow en mobile
+        card_container = ft.Container(
+            content=ft.Column([
                 ft.Text(f"{idx+1}. {p['texto']}", size=13, color=TEXT),
                 ft.Container(height=6),
-                ft.Row([btn_si, btn_no], spacing=10),
-            ], spacing=4))
+                # Column vertical: cada botón ocupa el ancho completo
+                ft.Column([btn_si, btn_no], spacing=8),
+            ], spacing=4),
+            bgcolor=CARD,
+            border=ft.border.all(1, BORDER),
+            border_radius=12,
+            padding=ft.padding.symmetric(horizontal=14, vertical=12),
         )
+        tarjetas_refs.append(card_container)
+        preguntas_cards.append(card_container)
 
+    # ── Botón ver resultado (cuando no todas respondidas) ─────
+    btn_ver_resultado = ft.ElevatedButton(
+        "Ver mi resultado",
+        icon=ft.Icons.ASSIGNMENT_TURNED_IN_OUTLINED,
+        on_click=lambda e: intentar_ver_resultado(),
+        style=ft.ButtonStyle(
+            bgcolor=ACCENT, color=WHITE,
+            shape=ft.RoundedRectangleBorder(radius=10),
+        ),
+    )
+
+    # ── Layout final ──────────────────────────────────────────
     return ft.Column([
+        # Header con progreso
         ft.Container(
             content=ft.Column([
                 ft.Row([
@@ -208,16 +301,25 @@ def build_test(page, state):
                         ft.Text("Resistencia a la Insulina", size=11, color=MUTED),
                     ], spacing=1),
                 ], spacing=10),
+                ft.Container(height=6),
+                ft.Text(
+                    "Responde Sí o No a cada pregunta. Al terminar verás tu resultado automáticamente.",
+                    size=12, color=MUTED,
+                ),
+                ft.Container(height=8),
+                ft.Row([progreso_txt], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
                 ft.Container(height=4),
-                ft.Text("Responde Sí o No a cada pregunta. Al terminar verás tu resultado automáticamente.",
-                        size=12, color=MUTED),
-            ], spacing=4),
+                progreso_bar,
+            ], spacing=2),
             bgcolor=SURFACE,
             padding=ft.padding.symmetric(horizontal=16, vertical=12),
             border=ft.border.only(bottom=ft.BorderSide(1, BORDER)),
         ),
+        # Preguntas + resultado
         ft.Column([
             *preguntas_cards,
+            ft.Container(height=12),
+            btn_ver_resultado,
             resultado_container,
             ft.Container(height=24),
         ], spacing=8, scroll=ft.ScrollMode.AUTO, expand=True),

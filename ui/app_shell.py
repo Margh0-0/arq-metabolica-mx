@@ -21,13 +21,13 @@ from ui.screens.gamificacion_screen import build_gamificacion
 from ui.screens.perfil_screen import build_perfil
 
 
-def main(page: ft.Page):
+async def main(page: ft.Page):
     page.title        = "ARQ-Metabólica MX"
     page.bgcolor      = BG
     page.padding      = 0
     page.theme_mode   = ft.ThemeMode.LIGHT
     page.fonts        = {}
-    page.window.center()
+    await page.window.center()
 
     # ── Intentar restaurar sesión guardada ───────────────────
     _usuario_activo = None
