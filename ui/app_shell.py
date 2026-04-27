@@ -27,7 +27,8 @@ async def main(page: ft.Page):
     page.padding      = 0
     page.theme_mode   = ft.ThemeMode.LIGHT
     page.fonts        = {}
-    await page.window.center()
+    if not page.web:
+        await page.window.center()
 
     # ── Intentar restaurar sesión guardada ───────────────────
     _usuario_activo = None
