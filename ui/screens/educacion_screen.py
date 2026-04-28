@@ -657,6 +657,27 @@ def build_educacion(page: ft.Page, state: dict) -> ft.Column:
             seccion_actual[0] += 1
             render_seccion()
 
+        # Ref mutable para el botón enviar — permite actualizarlo sin
+        # reconstruir todo el árbol (evita perder foco en TextFields).
+        btn_enviar_ref = [None]
+
+        def all_answered():
+            for qi, q in enumerate(lec["quiz"]):
+                q_tipo = q.get("tipo", "multiple")
+                if q_tipo == "ordena_plato":
+                    if resp_quiz[qi] is None or len(resp_quiz[qi]) < len(q["alimentos"]):
+                        return False
+                elif q_tipo == "sopa_letras":
+                    if resp_quiz[qi] is None or any(v == "" for v in resp_quiz[qi]):
+                        return False
+                elif q_tipo == "relaciona":
+                    if resp_quiz[qi] is None or len(resp_quiz[qi]) < len(q["pares"]):
+                        return False
+                else:
+                    if resp_quiz[qi] is None:
+                        return False
+            return True
+
         def render_quiz():
             preg_cards = []
 
@@ -755,25 +776,51 @@ def build_educacion(page: ft.Page, state: dict) -> ft.Column:
                         resp_quiz[qi] = [""] * len(q["palabras"])
                     campos = []
                     for pi, (pista, pal) in enumerate(zip(q["pistas"], q["palabras"])):
-                        def make_change(pi=pi):
+                        # Feedback post-envío: correcto / incorrecto por campo
+                        if quiz_enviado[0]:
+                            user_ans = (resp_quiz[qi][pi] if resp_quiz[qi] else "").lower().strip()
+                            es_correcta = user_ans == pal.lower().strip()
+                            borde_color = LOW if es_correcta else HIGH
+                            icono = ft.Text(
+                                "✅" if es_correcta else f"❌ ({pal})",
+                                size=11,
+                                color=LOW if es_correcta else HIGH,
+                            )
+                        else:
+                            borde_color = BORDER
+                            icono = None
+
+                        def make_change(pi=pi, qi=qi):
                             def h(e):
                                 if quiz_enviado[0]: return
                                 resp_quiz[qi][pi] = e.control.value.strip().lower()
+                                # Solo actualizar disabled del botón, SIN reconstruir
+                                # el árbol completo (preserva foco del TextField).
+                                if btn_enviar_ref[0]:
+                                    btn_enviar_ref[0].disabled = not all_answered()
+                                    page.update()
                             return h
+
+                        campo_cols = [
+                            ft.Text(f"Pista: {pista}", size=11, color=MUTED, italic=True),
+                            ft.TextField(
+                                hint_text="Escribe la palabra...",
+                                on_change=make_change(pi, qi),
+                                value=resp_quiz[qi][pi] if resp_quiz[qi] else "",
+                                read_only=quiz_enviado[0],
+                                bgcolor=SURFACE, color=TEXT,
+                                border_color=borde_color,
+                                focused_border_color=ACCENT3,
+                                hint_style=ft.TextStyle(color=MUTED),
+                                height=42,
+                            ),
+                        ]
+                        if icono:
+                            campo_cols.append(icono)
+
                         campos.append(ft.Container(
-                            content=ft.Column([
-                                ft.Text(f"Pista: {pista}", size=11, color=MUTED, italic=True),
-                                ft.TextField(
-                                    hint_text="Escribe la palabra...",
-                                    on_change=make_change(pi),
-                                    bgcolor=SURFACE, color=TEXT,
-                                    border_color=BORDER,
-                                    focused_border_color=ACCENT3,
-                                    hint_style=ft.TextStyle(color=MUTED),
-                                    height=42,
-                                ),
-                            ], spacing=4),
-                            bgcolor=CARD, border=ft.border.all(1, BORDER),
+                            content=ft.Column(campo_cols, spacing=4),
+                            bgcolor=CARD, border=ft.border.all(1, borde_color),
                             border_radius=10, padding=10,
                         ))
                     preg_cards.append(tarjeta(ft.Column([
@@ -853,23 +900,6 @@ def build_educacion(page: ft.Page, state: dict) -> ft.Column:
                         ft.Column(opciones_btns, spacing=6),
                     ], spacing=4)))
 
-            def all_answered():
-                for qi, q in enumerate(lec["quiz"]):
-                    q_tipo = q.get("tipo", "multiple")
-                    if q_tipo == "ordena_plato":
-                        if resp_quiz[qi] is None or len(resp_quiz[qi]) < len(q["alimentos"]):
-                            return False
-                    elif q_tipo == "sopa_letras":
-                        if resp_quiz[qi] is None or any(v == "" for v in resp_quiz[qi]):
-                            return False
-                    elif q_tipo == "relaciona":
-                        if resp_quiz[qi] is None or len(resp_quiz[qi]) < len(q["pares"]):
-                            return False
-                    else:
-                        if resp_quiz[qi] is None:
-                            return False
-                return True
-
             btn_enviar = ft.ElevatedButton(
                 "Ver resultados",
                 on_click=lambda e: enviar_quiz_leccion(),
@@ -879,6 +909,7 @@ def build_educacion(page: ft.Page, state: dict) -> ft.Column:
                     shape=ft.RoundedRectangleBorder(radius=8),
                 ),
             )
+            btn_enviar_ref[0] = btn_enviar
             quiz_area.controls = [
                 ft.Text("📝 Mini-juego de la lección", size=14,
                         weight=ft.FontWeight.BOLD, color=lec["color"]),
@@ -927,6 +958,8 @@ def build_educacion(page: ft.Page, state: dict) -> ft.Column:
             state[f"leccion_{lec['id']}_puntaje"] = correctas
             total = total_items
             color_res = LOW if correctas == total else MID if correctas >= total // 2 else HIGH
+            # Re-renderizar quiz con feedback visual (✅/❌ por campo)
+            render_quiz()
             quiz_area.controls.append(
                 ft.Container(
                     content=ft.Column([
