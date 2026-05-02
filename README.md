@@ -1,13 +1,22 @@
 # ARQ-Metabólica MX 🏛️📱
+
 ### App Móvil con Flet (Python + Flutter)
+
 **Índice Arquitectónico de Riesgo de Resistencia a la Insulina (IARRI-MX)**
 
 ---
 
-## ▶️ Correr en tu PC (preview móvil)
+## ▶️ Correr en desarrollo
 
 ```bash
-pip install flet numpy scipy
+# 1. Copiar variables de entorno
+cp .env.example .env
+# (Editar .env con tus credenciales de Supabase)
+
+# 2. Instalar dependencias
+pip install -e ".[dev]"
+
+# 3. Correr la app
 python main.py
 ```
 
@@ -16,29 +25,19 @@ python main.py
 ## 📱 Compilar APK para Android
 
 ### Requisitos
+
 - Python 3.9+
-- Flutter SDK instalado → https://flutter.dev/docs/get-started/install
+- Flutter SDK → https://flutter.dev/docs/get-started/install
 - Android Studio + Android SDK
 
-### Pasos
-
 ```bash
-# 1. Instalar flet con soporte build
-pip install flet numpy scipy
-
-# 2. Entrar a la carpeta del proyecto
-cd arq_metabolica_flet
-
-# 3. Compilar APK
+# Compilar APK
 flet build apk
 
 # El APK quedará en:
 #   build/apk/arq-metabolica-mx.apk
-```
 
-### Instalar en el celular
-```bash
-# Con el celular conectado por USB (modo desarrollador activado)
+# Instalar en el celular (USB + modo desarrollador)
 adb install build/apk/arq-metabolica-mx.apk
 ```
 
@@ -52,25 +51,24 @@ flet build ipa
 
 ---
 
-## 📱 Publicar en Google Play / App Store
-
-```bash
-# Android (AAB para Play Store)
-flet build aab
-
-# iOS (archivo .ipa para App Store)
-flet build ipa --team-id TU_TEAM_ID
-```
-
----
-
-## 📁 Estructura
+## 📁 Estructura del proyecto
 
 ```
-arq_metabolica_flet/
-├── main.py           ← App completa (única fuente)
-├── pyproject.toml    ← Configuración del proyecto
-└── README.md
+metabolica-mx/
+├── main.py               ← Punto de entrada
+├── pyproject.toml        ← Dependencias y configuración
+├── .env.example          ← Plantilla de variables de entorno
+│
+├── config/               ← Configuración (settings, carga de .env)
+├── core/                 ← Lógica de negocio (IARRI, IARM, datos)
+├── data/                 ← Repositorios y cliente Supabase
+├── ui/                   ← Interfaz de usuario
+│   ├── app_shell.py      ← Shell principal y navegación
+│   ├── theme.py          ← Colores y estilos globales
+│   ├── components/       ← Componentes reutilizables
+│   └── screens/          ← Pantallas de la app
+├── assets/               ← Recursos estáticos (mapa HTML, etc.)
+└── tests/                ← Tests unitarios
 ```
 
 ---
@@ -79,10 +77,13 @@ arq_metabolica_flet/
 
 | Pantalla | Descripción |
 |----------|-------------|
-| 🏠 **Inicio** | Selector de municipio, IARRI en grande, semáforo, 5 tarjetas de variables, análisis de sensibilidad, fórmula |
-| 🗺️ **Mapa** | Mapa SVG con heatmaps, comparativa municipal con barras, tabla epidemiológica Prob(RI) |
-| 🧮 **Calcular** | 5 sliders interactivos, cálculo en tiempo real, desglose por variable, Monte Carlo 1000 iter. con histograma |
-| 🛡️ **Intervención** | KPIs, recomendaciones expandibles, simulación Cuautlancingo 0.78→0.64, insignias gamificadas |
+| 🔐 **Login** | Autenticación con Supabase |
+| 🏠 **Inicio** | Selector de municipio, IARRI en grande, semáforo, variables territoriales |
+| 🗺️ **Mapa** | Mapa interactivo con heatmaps y comparativa municipal |
+| 🧮 **Calcular** | Sliders interactivos, cálculo en tiempo real, Monte Carlo |
+| 🛡️ **Intervención** | Recomendaciones, simulación arquitectónica, insignias gamificadas |
+| 📚 **Educación** | Lecciones y quiz IARRI |
+| 👤 **Perfil** | Datos del usuario y configuración |
 
 ---
 
@@ -106,9 +107,17 @@ IARRI = 0.20(1−AV) + 0.25(1−IC) + 0.15(1−ED) + 0.25(EAR) + 0.15(IM)
 
 | Municipio | IARRI | Riesgo |
 |-----------|-------|--------|
-| San Andrés Cholula | 0.3575 | Medio |
-| San Pablo Xochimehuacan | 0.6150 | Medio-Alto |
-| Cuautlancingo | 0.7800 | Alto |
+| San Andrés Cholula | 0.36 | Medio |
+| San Pablo Xochimehuacan | 0.62 | Medio-Alto |
+| Cuautlancingo | 0.78 | Alto |
+
+---
+
+## 🧪 Tests
+
+```bash
+pytest tests/
+```
 
 ---
 

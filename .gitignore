@@ -1,6 +1,9 @@
 # Sesión local (contiene tokens sensibles)
 sesion_local.json
 
+# Variables de entorno
+.env
+
 # Python
 __pycache__/
 *.py[cod]
@@ -9,15 +12,12 @@ __pycache__/
 .Python
 *.egg-info/
 dist/
-build/
 .eggs/
 
 # Entornos virtuales
 .venv/
 venv/
 env/
-.env
-sesion_local.json
 
 # IDEs
 .vscode/
@@ -32,4 +32,8 @@ nul
 # Flet build output
 build/
 
+# SDD / AI tools
 .atl/
+
+# Ruff cache
+.ruff_cache/
